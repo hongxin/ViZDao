@@ -6,6 +6,7 @@ import { LessonView } from './LessonView';             // 过拟合（已上线�
 import { DistributionLesson } from './DistributionLesson'; // 分布 KDE
 import { HighdimLesson } from './HighdimLesson';       // 高维困境
 import { ClusteringLesson } from './ClusteringLesson'; // 聚类 K-Means
+import { DimReductionLesson } from './DimReductionLesson'; // 降维 PCA
 
 export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   anscombe: AnscombeLesson,
@@ -13,4 +14,5 @@ export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   distribution: DistributionLesson,
   highdim: HighdimLesson,
   clustering: ClusteringLesson,
+  dimreduction: DimReductionLesson,
 };
