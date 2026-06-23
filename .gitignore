@@ -40,3 +40,6 @@ Thumbs.db
 # Cloudflare Workers
 .wrangler
 .dev.vars
+
+# Superpowers visual brainstorm scratch
+.superpowers/
