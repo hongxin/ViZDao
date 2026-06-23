@@ -71,7 +71,7 @@ const devCorsProxy = (): PluginOption => ({
 })
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/JetBot/' : '/',
+  base: command === 'build' ? '/ViZDao/' : '/',
   plugins: [react(), tailwindcss(), devCorsProxy()],
   server: {
     host: true,  // 监听 0.0.0.0，局域网可访问
