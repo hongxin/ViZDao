@@ -5,7 +5,7 @@ import { AnscombeUnit } from '../units/anscombe/anscombe.unit'; // 开场（体�
 import { OverfittingUnit } from '../units/overfitting/overfitting.unit'; // 过拟合（体验引擎·新范式）
 import { DistributionUnit } from '../units/distribution/distribution.unit'; // 分布（体验引擎·新范式）
 import { HighdimUnit } from '../units/highdim/highdim.unit'; // 高维困境（体验引擎·新范式）
-import { ClusteringLesson } from './ClusteringLesson'; // 聚类 K-Means
+import { ClusteringUnit } from '../units/clustering/clustering.unit'; // 聚类（体验引擎·新范式）
 import { DimReductionLesson } from './DimReductionLesson'; // 降维 PCA
 import { ClosingLesson } from './ClosingLesson';           // 收束·可视化×AI
 
@@ -14,7 +14,7 @@ export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   overfitting: OverfittingUnit,
   distribution: DistributionUnit,
   highdim: HighdimUnit,
-  clustering: ClusteringLesson,
+  clustering: ClusteringUnit,
   dimreduction: DimReductionLesson,
   closing: ClosingLesson,
 };
