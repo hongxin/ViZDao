@@ -7,7 +7,7 @@ import { DistributionUnit } from '../units/distribution/distribution.unit'; // �
 import { HighdimUnit } from '../units/highdim/highdim.unit'; // 高维困境（体验引擎·新范式）
 import { ClusteringUnit } from '../units/clustering/clustering.unit'; // 聚类（体验引擎·新范式）
 import { DimReductionUnit } from '../units/dimreduction/dimreduction.unit'; // 降维（体验引擎·新范式）
-import { ClosingLesson } from './ClosingLesson';           // 收束·可视化×AI
+import { ClosingUnit } from '../units/closing/closing.unit'; // 收束（体验引擎·新范式）
 
 export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   anscombe: AnscombeUnit,
@@ -16,5 +16,5 @@ export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   highdim: HighdimUnit,
   clustering: ClusteringUnit,
   dimreduction: DimReductionUnit,
-  closing: ClosingLesson,
+  closing: ClosingUnit,
 };
