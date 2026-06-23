@@ -8,15 +8,16 @@ import type { ConceptScript, StageHandle } from '../../engine/types';
 
 const ANSCOMBE_CONCEPT: ConceptScript = {
   beats: [
-    { kind: 'frame', enter: [{ op: 'showStats' }], say: '四组数据。它们的均值、方差、相关系数——几乎完全相同。', cta: '那画出来呢？ →' },
+    { kind: 'frame', enter: [{ op: 'showRawData' }], say: '四组真实数据，每组 11 个点。先用最朴素的可视化——一张表——把它们摆出来。盯着看，你能看出每组的形状吗？', cta: '看不出？那算算看 →' },
+    { kind: 'frame', enter: [{ op: 'showStats' }], say: '于是我们算统计量：均值、方差、相关系数。结果——四组几乎完全相同。', cta: '那画出来呢？ →' },
     {
       kind: 'predict', say: '画出来，四组会长得差不多吗？',
       commit: { kind: 'choice', id: 'guess', options: [{ value: 'same', label: '会一样' }, { value: 'diff', label: '会不同' }] },
     },
-    { kind: 'reveal', enter: [{ op: 'morphQuartet' }], say: '看——四种形状，天差地别。', hold: 1100, cta: '再看一眼 →' },
+    { kind: 'reveal', enter: [{ op: 'morphQuartet' }], say: '看——四种形状，天差地别。', hold: 1900, cta: '再看一眼 →' },
     {
-      kind: 'reveal', enter: [{ op: 'dropRegLines' }], hold: 1000, cta: '继续 →',
-      say: (l) => `而四条回归线，一模一样。你刚赌了「${l.guess === 'same' ? '会一样' : '会不同'}」——${l.guess === 'same' ? '统计量骗了你' : '统计量骗不过你，却骗得了大多数人'}。`,
+      kind: 'reveal', enter: [{ op: 'dropRegLines' }], hold: 1100, cta: '继续 →',
+      say: (l) => `连回归方程都一样：y = 3.00 + 0.50x。你刚赌了「${l.guess === 'same' ? '会一样' : '会不同'}」——${l.guess === 'same' ? '统计量骗了你' : '统计量骗不过你，却骗得了大多数人'}。`,
     },
     { kind: 'reflect', enter: [{ op: 'focusIV' }], say: '组 IV：整条回归线，被右边那个孤独的点撑着。拖动它，看线崩塌。', cta: '我懂了 →' },
   ],

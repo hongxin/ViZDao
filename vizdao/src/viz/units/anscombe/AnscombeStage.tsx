@@ -1,6 +1,6 @@
 // src/viz/units/anscombe/AnscombeStage.tsx — 安斯库姆的"舞台"：贯穿全课、不重建只变形。
 // 指令：showStats / morphQuartet / dropRegLines / focusIV(可拖离群点→回归线实时崩塌)。
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react';
 import * as echarts from 'echarts/core';
 import { ScatterChart, LineChart } from 'echarts/charts';
 import { GridComponent, TitleComponent, GraphicComponent } from 'echarts/components';
@@ -26,7 +26,7 @@ function stats(pts: { x: number; y: number }[]) {
   return { a, b, r, mx, my };
 }
 
-type Mode = 'blank' | 'stats' | 'quartet' | 'focus';
+type Mode = 'blank' | 'raw' | 'stats' | 'quartet' | 'focus';
 
 const GRID_POS = [
   { left: '6%', top: '9%', width: '40%', height: '37%' },
@@ -35,26 +35,37 @@ const GRID_POS = [
   { left: '54%', top: '56%', width: '40%', height: '37%' },
 ];
 
+const AXIS_BARE = { axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLine: { show: false } };
+
 function quartetOption(showReg: boolean) {
   const grid = GRID_POS.map((g) => ({ ...g }));
-  const xAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 2, max: 20, axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLine: { lineStyle: { color: 'hsl(0 0% 80%)' } } }));
-  const yAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 2, max: 14, axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLine: { lineStyle: { color: 'hsl(0 0% 80%)' } } }));
-  const title = GROUPS.map((g, i) => ({
+  const xAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 1, max: 20, ...AXIS_BARE }));
+  const yAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 2, max: 14, ...AXIS_BARE }));
+  const groupTitles = GROUPS.map((g, i) => ({
     text: `组 ${g}`, left: GRID_POS[i].left, top: i < 2 ? '3.5%' : '50.5%',
-    textStyle: { fontSize: 13, fontWeight: 400 as const, color: 'hsl(0 0% 42%)' },
+    textStyle: { fontSize: 13, fontWeight: 400 as const, color: 'hsl(0 0% 55%)' },
   }));
+  // 回归线方程标注：四组都是 y≈3.00+0.50x——一模一样。
+  const eqTitles = showReg ? GROUPS.map((g, i) => {
+    const { a, b } = stats(ANSCOMBE[g]);
+    return {
+      text: `y = ${a.toFixed(2)} + ${b.toFixed(2)} x`,
+      left: GRID_POS[i].left, top: i < 2 ? '40%' : '87%',
+      textStyle: { fontSize: 12, fontWeight: 400 as const, color: ACCENT, fontFamily: 'ui-monospace, monospace' },
+    };
+  }) : [];
+  const title = [...groupTitles, ...eqTitles];
+  // 四图逐一浮现：每象限点云依次淡入（animationDelay 错峰）。
   const scatter = GROUPS.map((g, i) => ({
-    type: 'scatter' as const, xAxisIndex: i, yAxisIndex: i, symbolSize: 7,
-    itemStyle: { color: POINT }, data: ANSCOMBE[g].map((p) => [p.x, p.y]),
+    type: 'scatter' as const, xAxisIndex: i, yAxisIndex: i, symbolSize: 8,
+    itemStyle: { color: POINT, opacity: 0.85 }, data: ANSCOMBE[g].map((p) => [p.x, p.y]),
+    animationDuration: 420, animationDelay: i * 320, animationEasing: 'cubicOut' as const,
   }));
   const lines = showReg ? GROUPS.map((g, i) => {
     const { a, b } = stats(ANSCOMBE[g]);
-    return { type: 'line' as const, xAxisIndex: i, yAxisIndex: i, showSymbol: false, lineStyle: { color: ACCENT, width: 2 }, data: [[2, a + b * 2], [20, a + b * 20]] };
+    return { type: 'line' as const, xAxisIndex: i, yAxisIndex: i, showSymbol: false, lineStyle: { color: ACCENT, width: 2 }, data: [[1, a + b * 1], [20, a + b * 20]], animationDuration: MOTION.reveal, animationEasing: 'cubicInOut' as const };
   }) : [];
-  return {
-    animation: true, animationDuration: MOTION.reveal, animationEasing: 'cubicOut' as const,
-    title, grid, xAxis, yAxis, series: [...scatter, ...lines],
-  };
+  return { animation: true, title, grid, xAxis, yAxis, series: [...scatter, ...lines] };
 }
 
 function focusOption(outlierY: number) {
@@ -84,7 +95,8 @@ export const AnscombeStage = forwardRef<StageHandle>(function AnscombeStage(_pro
   useImperativeHandle(ref, () => ({
     apply(directives: Directive[]) {
       for (const d of directives) {
-        if (d.op === 'showStats') { setMode('stats'); }
+        if (d.op === 'showRawData') { setMode('raw'); }
+        else if (d.op === 'showStats') { setMode('stats'); }
         else if (d.op === 'morphQuartet') { setShowReg(false); setMode('quartet'); }
         else if (d.op === 'dropRegLines') { setShowReg(true); }
         else if (d.op === 'focusIV') { outlierRef.current = 12.5; setMode('focus'); }
@@ -141,10 +153,52 @@ export const AnscombeStage = forwardRef<StageHandle>(function AnscombeStage(_pro
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'hsl(var(--background))' }}>
       <div ref={elRef} style={{ position: 'absolute', inset: 0 }} />
+      {mode === 'raw' && <RawDataOverlay />}
       {mode === 'stats' && <StatsOverlay />}
     </div>
   );
 });
+
+/** 原始数据：一张正经的表格（表格也是可视化）。四组并排，每组各有 x/y，组间分隔。 */
+function RawDataOverlay() {
+  const num = (n: number) => (Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2));
+  const rows = ANSCOMBE.I.map((_, i) => i);
+  const cell: CSSProperties = { padding: '0.16rem 0.85rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 'var(--vz-text-sm)' };
+  const sep = (gi: number): CSSProperties => (gi < 3 ? { borderRight: '1px solid hsl(var(--border))' } : {});
+  return (
+    <div className="vz-beat-in" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: '5.5rem' }}>
+      <table style={{ borderCollapse: 'collapse', fontFamily: 'ui-monospace, monospace' }}>
+        <thead>
+          <tr>
+            {GROUPS.map((g, gi) => (
+              <th key={g} colSpan={2} style={{ padding: '0 0.85rem 0.45rem', fontWeight: 400, fontSize: 'var(--vz-text-base)', color: 'hsl(var(--vz-ink-soft))', ...sep(gi) }}>组 {g}</th>
+            ))}
+          </tr>
+          <tr>
+            {GROUPS.map((g, gi) => (
+              <Fragment key={g}>
+                <th style={{ ...cell, color: 'hsl(var(--vz-ink-soft))', fontWeight: 400, borderBottom: '1px solid hsl(var(--foreground) / 0.28)' }}>x</th>
+                <th style={{ ...cell, color: 'hsl(var(--vz-ink-soft))', fontWeight: 400, borderBottom: '1px solid hsl(var(--foreground) / 0.28)', ...sep(gi) }}>y</th>
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((i) => (
+            <tr key={i}>
+              {GROUPS.map((g, gi) => (
+                <Fragment key={g}>
+                  <td style={{ ...cell, color: 'hsl(0 0% 28%)' }}>{num(ANSCOMBE[g][i].x)}</td>
+                  <td style={{ ...cell, color: 'hsl(0 0% 28%)', ...sep(gi) }}>{num(ANSCOMBE[g][i].y)}</td>
+                </Fragment>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 /** 设：只显四组统计量——强调"完全相同"。 */
 function StatsOverlay() {
