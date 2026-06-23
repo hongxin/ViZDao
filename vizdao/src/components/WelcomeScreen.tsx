@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useConfigStore } from '../store/configStore';
 import { useAgentStore } from '../store/agentStore';
+import { useUiStore } from '../store/uiStore';
 import { useT } from '../lib/i18n';
 
 export function WelcomeScreen() {
   const config = useConfigStore();
   const initAgent = useAgentStore(s => s.initAgent);
+  const enter = useUiStore(s => s.enter);
   const [showKey, setShowKey] = useState(false);
   const locale = useConfigStore(s => s.locale);
   const t = useT();
@@ -19,6 +21,7 @@ export function WelcomeScreen() {
       return;
     }
     initAgent();
+    enter();
   };
 
   return (
@@ -37,12 +40,22 @@ export function WelcomeScreen() {
           <h1 className="text-3xl font-bold mb-2">ViZDao · 微知道</h1>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             {locale === 'en'
-              ? 'Fill in your DeepSeek API Key to get started.'
-              : '填入 DeepSeek API Key 即可开始'}
+              ? 'Open and use it — jump straight into the lessons. (Optional) add a DeepSeek key to enable the AI tutor.'
+              : '打开即用 —— 直接进入课程开始动手。（可选）填 DeepSeek Key 启用 AI 助教。'}
           </p>
         </div>
 
-        <div className="space-y-3">
+        <button
+          onClick={enter}
+          className="w-full py-3 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-medium text-sm hover:opacity-90 transition-opacity"
+        >
+          {locale === 'en' ? 'Enter the lessons →' : '直接进入课程 →'}
+        </button>
+
+        <div className="space-y-3 border-t border-[hsl(var(--border))] pt-5">
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">
+            {locale === 'en' ? 'Optional · enable AI tutor' : '可选 · 启用 AI 助教'}
+          </p>
           <div>
             <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('welcome.apiKey')}</label>
             <div className="flex gap-2">
@@ -96,9 +109,9 @@ export function WelcomeScreen() {
           <button
             onClick={handleStart}
             disabled={!canStart}
-            className="w-full py-3 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-30"
+            className="w-full py-2.5 rounded-xl border border-[hsl(var(--border))] text-sm hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-30"
           >
-            {t('welcome.start')}
+            {locale === 'en' ? 'Enable AI tutor & enter' : '启用 AI 助教并进入'}
           </button>
           <p className="text-[10px] text-center text-[hsl(var(--muted-foreground))]">
             {locale === 'en'
