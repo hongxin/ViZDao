@@ -8,6 +8,8 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { ANSCOMBE } from '../../datasets/anscombe';
 import type { StageHandle, Directive } from '../../engine/types';
 import { MOTION } from '../../engine/tokens';
+import { TheoryToggle } from '../../engine/theory';
+import { AnscombeTheory } from './AnscombeTheory';
 
 echarts.use([ScatterChart, LineChart, GridComponent, TitleComponent, GraphicComponent, CanvasRenderer]);
 
@@ -117,6 +119,7 @@ export const AnscombeStage = forwardRef<StageHandle>(function AnscombeStage(_pro
   const [showReg, setShowReg] = useState(false);
   const outlierRef = useRef(12.5); // 组 IV 离群点初始 y
   const fitRef = useRef({ p0: 9, p1: 5 }); // "你来当建模师"：可拖直线两端点 y（初值故意拟合得很差）
+  const [theoryOpen, setTheoryOpen] = useState(false);
   const [, force] = useState(0);
 
   useImperativeHandle(ref, () => ({
@@ -210,6 +213,8 @@ export const AnscombeStage = forwardRef<StageHandle>(function AnscombeStage(_pro
       <div ref={elRef} style={{ position: 'absolute', inset: 0 }} />
       {mode === 'raw' && <RawDataOverlay />}
       {mode === 'stats' && <StatsOverlay />}
+      {!theoryOpen && <TheoryToggle onOpen={() => setTheoryOpen(true)} />}
+      {theoryOpen && <AnscombeTheory onClose={() => setTheoryOpen(false)} />}
     </div>
   );
 });
