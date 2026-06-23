@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalize, solve, ridgeFit, predict, metrics, roughness, XMIN, XMAX } from './ridge';
+import { normalize, solve, ridgeFit, metrics, roughness, XMIN, XMAX } from './ridge';
 import { genSinNoise } from '../datasets/sinNoise';
 
 describe('solve（高斯消元）', () => {

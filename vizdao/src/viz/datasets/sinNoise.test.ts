@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { makeRng, gaussian, genSinNoise } from './sinNoise';
+import { makeRng, genSinNoise } from './sinNoise';
 import { XMIN, XMAX } from '../analysis/ridge';
 
 describe('makeRng（mulberry32）', () => {
