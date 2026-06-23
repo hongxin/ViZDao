@@ -82,7 +82,7 @@ const translations = {
   'cmd.advanced_to': { en: 'Advanced to phase', zh: '已推进到阶段' },
   'cmd.unknown': { en: 'Unknown command', zh: '未知命令' },
   'cmd.type_help': { en: 'Type /help for available commands.', zh: '输入 /help 查看可用命令。' },
-  'cmd.help_title': { en: '# JetBot Commands', zh: '# JetBot 命令' },
+  'cmd.help_title': { en: '# ViZDao Commands', zh: '# ViZDao 命令' },
   'cmd.help_help': { en: '`/help` — Show this help', zh: '`/help` — 显示帮助' },
   'cmd.help_clear': { en: '`/clear` — Clear conversation history', zh: '`/clear` — 清除对话历史' },
   'cmd.help_status': { en: '`/status` — Show current status', zh: '`/status` — 显示当前状态' },

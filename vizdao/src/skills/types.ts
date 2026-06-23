@@ -1,4 +1,4 @@
-// jetbot/src/skills/types.ts
+// vizdao/src/skills/types.ts
 
 export type LifecycleStage = 'new' | 'active' | 'stable' | 'stale' | 'deprecated';
 

@@ -1,5 +1,5 @@
 /**
- * Structured logging system for JetBot.
+ * Structured logging system for ViZDao.
  *
  * Usage:
  *   import { logger } from '../lib/logger';

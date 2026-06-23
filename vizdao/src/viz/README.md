@@ -2,7 +2,7 @@
 
 > ViZDao / 微知道 的业务核心。当前为**占位结构**，仅标注职责意图，实质设计待头脑风暴与深入规划阶段填充。
 
-将 JetBot 的「编程助手」语义替换为「可视化实验」语义。AI Agent（`src/agent`、`src/llm`、`src/tools`）保留为**可插拔助教模块**，在此层之上提供解释 / 生成 / 点评能力。
+将原「编程助手」语义替换为「可视化实验」语义。AI Agent（`src/agent`、`src/llm`、`src/tools`）保留为**可插拔助教模块**，在此层之上提供解释 / 生成 / 点评能力。
 
 ## 子模块职责（待定，欢迎在 brainstorm 中重塑）
 
@@ -15,7 +15,7 @@
 | `lessons/` | 教学单元：分步教程、目标、检查点、闯关 | 新建 |
 | `types.ts` | 跨模块共享类型 | 新建 |
 
-## 与 JetBot 资产的关系
+## 与原始资产的关系
 
 - **保留**：IndexedDB 持久层（`lib/db.ts`）、UI shell、i18n 双语、zustand store、scheduler、CORS proxy worker、CI/部署
 - **可插拔**：agent / llm / tools / skills —— 作为「可视化助教」

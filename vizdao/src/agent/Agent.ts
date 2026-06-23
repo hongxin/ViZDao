@@ -102,7 +102,7 @@ export class Agent {
       import('../store/chatStore').then(m => m.useChatStore.getState().resolveDistillProposal((e.detail as { msgId: string }).msgId, false));
     }) as EventListener);
 
-    // Load soul file (jetbot.md) from VirtualFS — awaited in handle() before first LLM call
+    // Load soul file (vizdao.md) from VirtualFS — awaited in handle() before first LLM call
     this.soulReady = this.promptBuilder.loadSoulFile(this.tools.fs).catch(err =>
       log.error('soul file load failed', { error: err.message })
     );

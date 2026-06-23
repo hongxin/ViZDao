@@ -30,7 +30,7 @@ export class SystemPromptBuilder {
    *   1. Try VirtualFS (user may have edited it)
    *   2. If not found, seed the default into VirtualFS and use it
    *
-   * This makes jetbot.md user-editable via the agent's own edit_file tool,
+   * This makes vizdao.md user-editable via the agent's own edit_file tool,
    * while always having a sensible out-of-the-box default.
    */
   async loadSoulFile(fs: VirtualFS): Promise<void> {
