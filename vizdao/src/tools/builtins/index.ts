@@ -11,6 +11,7 @@ import { createRenderHtml } from './renderHtml';
 import { createExportFile } from './exportFile';
 import { createGetTime } from './getTime';
 import { createGetSysinfo } from './getSysinfo';
+import { registerVizTools } from '../../viz/tutor/vizTools';
 
 export function registerBuiltins(registry: ToolRegistry): void {
   const fs = registry.fs;
@@ -34,4 +35,7 @@ export function registerBuiltins(registry: ToolRegistry): void {
   registry.register(createJsEval());
   registry.register(createRenderHtml());
   registry.register(createExportFile(fs));
+
+  // ViZDao tutor tools — read-only experiment state inspection
+  registerVizTools(registry);
 }

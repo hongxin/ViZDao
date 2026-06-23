@@ -1,13 +1,13 @@
 import type { RuntimeProfile } from '../env/types';
 import { profileToPrompt } from '../env/RuntimeDetector';
 import type { VirtualFS } from '../tools/VirtualFS';
-import defaultSoulMd from './jetbot.md?raw';
+import defaultSoulMd from './vizdao.md?raw';
 import { logger } from '../lib/logger';
 
 const log = logger.module('prompt');
 
 /** Path of the soul file in VirtualFS — user-editable at runtime */
-export const SOUL_FILE_PATH = '/jetbot.md';
+export const SOUL_FILE_PATH = '/vizdao.md';
 
 interface Section {
   key: string;
@@ -21,12 +21,12 @@ export class SystemPromptBuilder {
   constructor() {
     // Minimal fallback identity — will be replaced by loadSoulFile()
     this.setSection('identity', 10,
-      'You are JetBot, a browser-based AI coding assistant running entirely inside the user\'s browser tab.'
+      'You are ViZDao 助教, a browser-based AI visualization tutor running entirely inside the user\'s browser tab.'
     );
   }
 
   /**
-   * Load the soul file (jetbot.md) with hybrid strategy:
+   * Load the soul file (vizdao.md) with hybrid strategy:
    *   1. Try VirtualFS (user may have edited it)
    *   2. If not found, seed the default into VirtualFS and use it
    *
