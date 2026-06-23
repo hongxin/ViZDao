@@ -5,14 +5,6 @@ import { useT } from '../lib/i18n';
 import { Modal } from './shared/Modal';
 import { SkillsPanel } from './SkillsPanel';
 
-const PROVIDER_LABELS: Record<string, Record<string, string>> = {
-  openai: { en: 'OpenAI', zh: 'OpenAI' },
-  deepseek: { en: 'DeepSeek', zh: 'DeepSeek' },
-  zhipu: { en: 'Zhipu', zh: '智谱' },
-  ollama: { en: 'Ollama', zh: 'Ollama' },
-  custom: { en: 'Custom', zh: '自定义' },
-};
-
 type TabId = 'provider' | 'skills';
 
 interface Props {
@@ -83,25 +75,6 @@ export function SettingsDialog({ open, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('settings.provider')}</label>
-            <div className="flex gap-2">
-              {['openai', 'deepseek', 'zhipu', 'ollama', 'custom'].map(p => (
-                <button
-                  key={p}
-                  onClick={() => config.applyPreset(p)}
-                  className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                    config.provider === p
-                      ? 'border-[hsl(var(--ring))] bg-[hsl(var(--accent))]'
-                      : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'
-                  }`}
-                >
-                  {PROVIDER_LABELS[p]?.[config.locale] ?? p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
             <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('settings.apiKey')}</label>
             <div className="flex gap-2">
               <input
@@ -122,56 +95,26 @@ export function SettingsDialog({ open, onClose }: Props) {
 
           <div>
             <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('settings.model')}</label>
-            {config.provider === 'deepseek' ? (
-              <select
-                value={config.model}
-                onChange={e => config.setModel(e.target.value)}
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              >
-                <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-                <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={config.model}
-                onChange={e => config.setModel(e.target.value)}
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              />
-            )}
-          </div>
-
-          {config.provider === 'deepseek' && (
-            <div>
-              <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('settings.thinkingMode')}</label>
-              <div className="flex gap-2">
-                {(['non-thinking', 'thinking', 'thinking_max'] as const).map(mode => (
-                  <button
-                    key={mode}
-                    onClick={() => config.setThinkingMode(mode)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                      config.thinkingMode === mode
-                        ? 'border-[hsl(var(--ring))] bg-[hsl(var(--accent))]'
-                        : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'
-                    }`}
-                  >
-                    {mode === 'non-thinking' ? t('settings.thinking.non') :
-                     mode === 'thinking' ? t('settings.thinking.thinking') :
-                     t('settings.thinking.thinking_max')}
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-2">
+              {(['flash', 'pro'] as const).map(tier => (
+                <button
+                  key={tier}
+                  onClick={() => config.setTier(tier)}
+                  className={`px-4 py-1.5 text-xs rounded-lg border transition-colors ${
+                    config.tier === tier
+                      ? 'border-[hsl(var(--ring))] bg-[hsl(var(--accent))]'
+                      : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'
+                  }`}
+                >
+                  {tier === 'flash'
+                    ? (config.locale === 'zh' ? 'Flash（快速）' : 'Flash (Fast)')
+                    : (config.locale === 'zh' ? 'Pro（深度）' : 'Pro (Deep)')}
+                </button>
+              ))}
             </div>
-          )}
-
-          <div>
-            <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('settings.baseUrl')}</label>
-            <input
-              type="text"
-              value={config.baseUrl}
-              onChange={e => config.setBaseUrl(e.target.value)}
-              className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-            />
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
+              {config.tier === 'flash' ? 'deepseek-chat' : 'deepseek-reasoner'}
+            </p>
           </div>
 
           <div>

@@ -9,26 +9,18 @@ export interface ProviderPreset {
 
 export type ThinkingMode = 'non-thinking' | 'thinking' | 'thinking_max';
 
-// Legacy model names that auto-map to V4 equivalents (until 2026-07-24)
+// Legacy model names kept for backward compat with agentStore / resolveLegacyModel callers
 const V4_LEGACY_MAP: Record<string, string> = {
-  'deepseek-chat': 'deepseek-v4-flash',
-  'deepseek-reasoner': 'deepseek-v4-flash',
+  'deepseek-chat': 'deepseek-chat',
+  'deepseek-reasoner': 'deepseek-reasoner',
 };
 
-const PRESETS: Record<string, ProviderPreset> = {
-  openai: { provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o' },
-  deepseek: { provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-v4-flash' },
-  zhipu: { provider: 'zhipu', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-5' },
-  ollama: { provider: 'ollama', baseUrl: 'http://localhost:11434/v1', model: 'qwen3.5:27b' },
-  custom: { provider: 'custom', baseUrl: '', model: '' },
-};
-
-// Providers that don't require an API key
-const KEY_OPTIONAL_PROVIDERS = new Set(['ollama']);
+// Fixed DeepSeek endpoint
+const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 
 /** Detect if the given model ID is a DeepSeek V4 family model */
 export function isDeepSeekV4(model: string): boolean {
-  return model.startsWith('deepseek-v4-');
+  return model.startsWith('deepseek-v4-') || model === 'deepseek-chat' || model === 'deepseek-reasoner';
 }
 
 /** Resolve legacy model names to their V4 equivalents */
@@ -44,6 +36,7 @@ interface ConfigState {
   proxyUrl: string;
   locale: Locale;
   thinkingMode: ThinkingMode;
+  tier: 'flash' | 'pro';
   setProvider: (provider: string) => void;
   setApiKey: (key: string) => void;
   setModel: (model: string) => void;
@@ -51,6 +44,7 @@ interface ConfigState {
   setProxyUrl: (url: string) => void;
   setLocale: (locale: Locale) => void;
   setThinkingMode: (mode: ThinkingMode) => void;
+  setTier: (tier: 'flash' | 'pro') => void;
   applyPreset: (provider: string) => void;
   validate: () => { valid: boolean; errors: string[] };
 }
@@ -64,8 +58,8 @@ function loadConfig(): Partial<ConfigState> {
 
 function saveConfig(state: Partial<ConfigState>): void {
   try {
-    const { provider, apiKey, model, baseUrl, proxyUrl, locale, thinkingMode } = state as ConfigState;
-    localStorage.setItem('jetbot-config', JSON.stringify({ provider, apiKey, model, baseUrl, proxyUrl, locale, thinkingMode }));
+    const { provider, apiKey, model, baseUrl, proxyUrl, locale, thinkingMode, tier } = state as ConfigState;
+    localStorage.setItem('jetbot-config', JSON.stringify({ provider, apiKey, model, baseUrl, proxyUrl, locale, thinkingMode, tier }));
   } catch { /* private browsing */ }
 }
 
@@ -73,19 +67,28 @@ const saved = loadConfig();
 const initLocale = (saved.locale as Locale) || (navigator.language.startsWith('zh') ? 'zh' : 'en');
 setLocale(initLocale);
 
+// Derive tier from saved model if tier not explicitly saved
+function initTier(saved: Partial<ConfigState>): 'flash' | 'pro' {
+  if (saved.tier === 'flash' || saved.tier === 'pro') return saved.tier;
+  if (saved.model === 'deepseek-reasoner') return 'pro';
+  return 'flash';
+}
+
+const tier = initTier(saved);
+const initModel = tier === 'pro' ? 'deepseek-reasoner' : 'deepseek-chat';
+
 export const useConfigStore = create<ConfigState>((set, get) => ({
-  provider: saved.provider || 'openai',
+  // Fixed to deepseek — kept for backward compat with agentStore/LLM client
+  provider: 'deepseek',
   apiKey: saved.apiKey || '',
-  model: saved.model || 'gpt-4o',
-  baseUrl: saved.baseUrl || 'https://api.openai.com/v1',
-  // Default proxy: only in dev, where the Vite dev server provides a /proxy
-  // endpoint. In production (e.g. GitHub Pages static hosting) there is no
-  // such endpoint — defaulting to origin would POST to a static host and get
-  // 405. Production defaults to empty (direct API call); users needing a
-  // proxy set it explicitly in Settings.
+  model: initModel,
+  // Fixed to DeepSeek endpoint — kept in state so agentStore can still read config.baseUrl
+  baseUrl: DEEPSEEK_BASE_URL,
   proxyUrl: (saved.proxyUrl ?? (import.meta.env.DEV && typeof window !== 'undefined' ? window.location.origin : '')).trim(),
   locale: initLocale,
+  // Keep thinkingMode for backward compat with agentStore/OpenAICompatibleClient
   thinkingMode: (saved.thinkingMode as ThinkingMode) || 'non-thinking',
+  tier,
 
   setProvider: (provider) => set(s => { const n = { ...s, provider }; saveConfig(n); return n; }),
   setApiKey: (apiKey) => set(s => { const n = { ...s, apiKey }; saveConfig(n); return n; }),
@@ -95,10 +98,18 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   setLocale: (locale) => set(s => { setLocale(locale); const n = { ...s, locale }; saveConfig(n); return n; }),
   setThinkingMode: (thinkingMode) => set(s => { const n = { ...s, thinkingMode }; saveConfig(n); return n; }),
 
-  applyPreset: (provider) => {
-    const preset = PRESETS[provider] ?? PRESETS.custom;
+  setTier: (tier: 'flash' | 'pro') =>
     set(s => {
-      const n = { ...s, provider: preset.provider, baseUrl: preset.baseUrl, model: preset.model };
+      const model = tier === 'flash' ? 'deepseek-chat' : 'deepseek-reasoner';
+      const n = { ...s, tier, model };
+      saveConfig(n);
+      return n;
+    }),
+
+  // applyPreset kept for backward compat; always applies deepseek regardless of argument
+  applyPreset: (_provider) => {
+    set(s => {
+      const n = { ...s, provider: 'deepseek', baseUrl: DEEPSEEK_BASE_URL };
       saveConfig(n);
       return n;
     });
@@ -107,9 +118,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   validate: () => {
     const state = get();
     const errors: string[] = [];
-    if (!state.apiKey && !KEY_OPTIONAL_PROVIDERS.has(state.provider)) errors.push('API Key is required');
-    if (!state.baseUrl) errors.push('Base URL is required');
-    if (!state.model) errors.push('Model is required');
+    if (!state.apiKey) errors.push('API Key is required');
     return { valid: errors.length === 0, errors };
   },
 }));

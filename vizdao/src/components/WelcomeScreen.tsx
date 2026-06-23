@@ -3,16 +3,6 @@ import { useConfigStore } from '../store/configStore';
 import { useAgentStore } from '../store/agentStore';
 import { useT } from '../lib/i18n';
 
-const PROVIDERS = ['openai', 'deepseek', 'zhipu', 'ollama', 'custom'] as const;
-const PROVIDER_LABELS: Record<string, Record<string, string>> = {
-  openai: { en: 'OpenAI', zh: 'OpenAI' },
-  deepseek: { en: 'DeepSeek', zh: 'DeepSeek' },
-  zhipu: { en: 'Zhipu', zh: '智谱' },
-  ollama: { en: 'Ollama', zh: 'Ollama' },
-  custom: { en: 'Custom', zh: '自定义' },
-};
-const KEY_OPTIONAL = new Set(['ollama']);
-
 export function WelcomeScreen() {
   const config = useConfigStore();
   const initAgent = useAgentStore(s => s.initAgent);
@@ -20,8 +10,7 @@ export function WelcomeScreen() {
   const locale = useConfigStore(s => s.locale);
   const t = useT();
 
-  const isKeyOptional = KEY_OPTIONAL.has(config.provider);
-  const canStart = isKeyOptional ? config.baseUrl !== '' && config.model !== '' : config.apiKey !== '';
+  const canStart = config.apiKey !== '';
 
   const handleStart = () => {
     const { valid, errors } = config.validate();
@@ -45,59 +34,62 @@ export function WelcomeScreen() {
         </div>
 
         <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">JetBot</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] whitespace-pre-line">
-            {t('welcome.subtitle')}
+          <h1 className="text-3xl font-bold mb-2">ViZDao · 微知道</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            {locale === 'en'
+              ? 'Fill in your DeepSeek API Key to get started.'
+              : '填入 DeepSeek API Key 即可开始'}
           </p>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5 block">{t('welcome.provider')}</label>
+            <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('welcome.apiKey')}</label>
             <div className="flex gap-2">
-              {PROVIDERS.map(p => (
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={config.apiKey}
+                onChange={e => config.setApiKey(e.target.value)}
+                className="flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                placeholder="sk-..."
+              />
+              <button
+                onClick={() => setShowKey(!showKey)}
+                className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+              >
+                {showKey ? t('welcome.hide') : t('welcome.show')}
+              </button>
+            </div>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
+              {t('welcome.apiKeyHint')}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5 block">
+              {locale === 'en' ? 'Model Tier' : '模型档位'}
+            </label>
+            <div className="flex gap-2">
+              {(['flash', 'pro'] as const).map(tier => (
                 <button
-                  key={p}
-                  onClick={() => config.applyPreset(p)}
+                  key={tier}
+                  onClick={() => config.setTier(tier)}
                   className={`flex-1 px-3 py-2 text-sm rounded-xl border transition-colors ${
-                    config.provider === p
+                    config.tier === tier
                       ? 'border-[hsl(var(--ring))] bg-[hsl(var(--accent))] font-medium'
                       : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'
                   }`}
                 >
-                  {PROVIDER_LABELS[p]?.[locale] ?? p}
+                  {tier === 'flash'
+                    ? (locale === 'zh' ? 'Flash 快速' : 'Flash')
+                    : (locale === 'zh' ? 'Pro 深度' : 'Pro')}
                 </button>
               ))}
             </div>
-          </div>
-
-          {isKeyOptional ? (
-            <p className="text-xs text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] rounded-xl px-4 py-3">
-              {t('welcome.ollamaHint')}
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
+              {config.tier === 'flash' ? 'deepseek-chat' : 'deepseek-reasoner'}
             </p>
-          ) : (
-            <div>
-              <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">{t('welcome.apiKey')}</label>
-              <div className="flex gap-2">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  value={config.apiKey}
-                  onChange={e => config.setApiKey(e.target.value)}
-                  className="flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                  placeholder="sk-..."
-                />
-                <button
-                  onClick={() => setShowKey(!showKey)}
-                  className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                >
-                  {showKey ? t('welcome.hide') : t('welcome.show')}
-                </button>
-              </div>
-              <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
-                {t('welcome.apiKeyHint')}
-              </p>
-            </div>
-          )}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -110,8 +102,8 @@ export function WelcomeScreen() {
           </button>
           <p className="text-[10px] text-center text-[hsl(var(--muted-foreground))]">
             {locale === 'en'
-              ? 'Model, base URL and other options can be configured in Settings after start.'
-              : '模型、接口地址等选项可在启动后进入 Settings 配置。'}
+              ? 'Proxy URL and other options can be configured in Settings after start.'
+              : '代理地址等选项可在启动后进入 Settings 配置。'}
           </p>
         </div>
       </div>
