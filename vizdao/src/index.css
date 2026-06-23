@@ -13,7 +13,24 @@
   --destructive: 0 84.2% 60.2%;
   --accent: 0 0% 96.1%;
   --accent-foreground: 0 0% 9%;
+
+  /* ViZDao 体验引擎 · 设计令牌（少而固定；美学是逻辑的结果）。 */
+  --vz-accent: 18 92% 52%;          /* 唯一强调色：此刻该看的东西（暖橙） */
+  --vz-ink-soft: 0 0% 42%;          /* 次要文字 */
+  --vz-ease: cubic-bezier(0.22, 1, 0.36, 1);  /* 一条缓动曲线 */
+  --vz-dur-quick: 200ms;
+  --vz-dur-reveal: 720ms;
+  --vz-measure: 34rem;              /* 旁白行宽 ~60–72 字符 */
+  /* 字阶（模数 ~1.25） */
+  --vz-text-sm: 0.875rem;  --vz-text-base: 1rem;     --vz-text-lg: 1.25rem;
+  --vz-text-xl: 1.5rem;    --vz-text-2xl: 1.953rem;  --vz-text-3xl: 2.441rem;
+  /* 间距（8px 基线） */
+  --vz-s1: 0.5rem; --vz-s2: 1rem; --vz-s3: 1.5rem; --vz-s4: 2rem; --vz-s6: 3rem;
 }
+
+/* 一拍进入：克制的淡入上移（动效只为揭示与转场）。 */
+@keyframes vz-beat-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.vz-beat-in { animation: vz-beat-in var(--vz-dur-quick) var(--vz-ease) both; }
 
 @media (prefers-color-scheme: dark) {
   :root {
