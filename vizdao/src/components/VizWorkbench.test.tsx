@@ -16,7 +16,13 @@ describe('VizWorkbench 多单元导航', () => {
     }
   });
 
-  it('默认在开场单元（未建成 → 显示课堂讲授占位）', () => {
+  it('默认在开场单元 → 渲染安斯库姆内容', () => {
+    render(<VizWorkbench />);
+    expect(screen.getByText(/统计量完全相同/)).toBeInTheDocument();
+  });
+
+  it('未建成单元（收束）显示课堂讲授占位', () => {
+    useNavStore.setState({ index: LESSON_META.length - 1 });
     render(<VizWorkbench />);
     expect(screen.getByText(/课堂讲授/)).toBeInTheDocument();
   });
