@@ -6,7 +6,7 @@ import { OverfittingUnit } from '../units/overfitting/overfitting.unit'; // 过�
 import { DistributionUnit } from '../units/distribution/distribution.unit'; // 分布（体验引擎·新范式）
 import { HighdimUnit } from '../units/highdim/highdim.unit'; // 高维困境（体验引擎·新范式）
 import { ClusteringUnit } from '../units/clustering/clustering.unit'; // 聚类（体验引擎·新范式）
-import { DimReductionLesson } from './DimReductionLesson'; // 降维 PCA
+import { DimReductionUnit } from '../units/dimreduction/dimreduction.unit'; // 降维（体验引擎·新范式）
 import { ClosingLesson } from './ClosingLesson';           // 收束·可视化×AI
 
 export const LESSON_COMPONENTS: Record<string, ComponentType> = {
@@ -15,6 +15,6 @@ export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   distribution: DistributionUnit,
   highdim: HighdimUnit,
   clustering: ClusteringUnit,
-  dimreduction: DimReductionLesson,
+  dimreduction: DimReductionUnit,
   closing: ClosingLesson,
 };
