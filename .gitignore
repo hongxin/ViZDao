@@ -43,3 +43,6 @@ Thumbs.db
 
 # Superpowers visual brainstorm scratch
 .superpowers/
+
+# Hermes 上游设计交接物 — 本地存档，不入库/不上线（已整合进 docs/ 与 src/viz/）
+hermes-work/
