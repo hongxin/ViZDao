@@ -26,12 +26,44 @@ export interface Dataset {
   rows?: unknown[];
 }
 
-/** 一个教学单元的最小描述。 */
-export interface Lesson {
+/** 旋钮：行的入口。把"看见模型"变成"亲手让模型动"。 */
+export interface Knob {
   id: string;
-  title: string;
-  /** 分步内容，待细化。 */
-  steps?: unknown[];
+  label: string;
+  kind: 'slider' | 'toggle' | 'select' | 'button';
+  /** 绑定到模型参数名，驱动重算。 */
+  bindParam: string;
+  default: number | boolean | string;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** slider 标度；λ 这类跨数量级参数必须 'log'。 */
+  scale?: 'linear' | 'log';
+  options?: { value: string; label: string }[];
+  unit?: string;
+  hint?: string;
 }
 
-export {}; // 保证作为模块被识别
+/** 闯关：要求学员把模型调到某个可判定的状态。 */
+export interface Checkpoint {
+  id: string;
+  prompt: string;
+  verify: string;
+}
+
+/** 一个教学单元 = 讲(hook) + 做(knobs) + 悟(ahaMoment/takeaway)。 */
+export interface Lesson {
+  id: string;
+  act: 0 | 1 | 2 | 3;
+  title: string;
+  hook: string;
+  chartType: string;
+  datasetId: string;
+  knobs: Knob[];
+  ahaMoment: string;
+  takeaway: string;
+  checkpoint?: Checkpoint;
+  aiHints: string[];
+  refSlides: string[];
+  estMinutes: number;
+}
