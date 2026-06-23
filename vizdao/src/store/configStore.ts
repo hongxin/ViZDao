@@ -65,7 +65,8 @@ function saveConfig(state: Partial<ConfigState>): void {
 
 const saved = loadConfig();
 const initLocale = (saved.locale as Locale) || (navigator.language.startsWith('zh') ? 'zh' : 'en');
-setLocale(initLocale);
+// 注：不在模块加载时调用 setLocale —— i18n 现已自初始化 locale，避免循环 import 的 TDZ 崩溃。
+// 用户切换语言时由 setLocale action（见下）回推给 i18n。
 
 // Derive tier from saved model if tier not explicitly saved
 function initTier(saved: Partial<ConfigState>): 'flash' | 'pro' {

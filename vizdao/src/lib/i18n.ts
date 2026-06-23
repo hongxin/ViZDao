@@ -175,7 +175,20 @@ const translations = {
 
 export type TranslationKey = keyof typeof translations;
 
-let currentLocale: Locale = 'en';
+// 自初始化 locale（不依赖 configStore 在模块加载时回推，避免 i18n⇄configStore
+// 循环 import 在 dev 原生 ESM 下触发 currentLocale 的 TDZ 崩溃）。
+function detectInitialLocale(): Locale {
+  try {
+    const raw = localStorage.getItem('jetbot-config');
+    if (raw) {
+      const l = (JSON.parse(raw) as { locale?: string }).locale;
+      if (l === 'zh' || l === 'en') return l;
+    }
+  } catch { /* ignore */ }
+  return typeof navigator !== 'undefined' && navigator.language.startsWith('zh') ? 'zh' : 'en';
+}
+
+let currentLocale: Locale = detectInitialLocale();
 
 export function setLocale(locale: Locale): void {
   currentLocale = locale;
