@@ -18,7 +18,7 @@ describe('VizWorkbench 多单元导航', () => {
 
   it('默认在开场单元 → 渲染安斯库姆体验单元', () => {
     render(<VizWorkbench />);
-    expect(screen.getByText(/四组数据/)).toBeInTheDocument();
+    expect(screen.getByText(/四组真实数据/)).toBeInTheDocument();
   });
 
   it('末单元（收束）渲染收束页内容', () => {
