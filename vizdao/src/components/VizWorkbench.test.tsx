@@ -5,6 +5,15 @@ import { useNavStore } from '../store/navStore';
 import { LESSON_META } from '../viz/lessons/order';
 
 vi.mock('../viz/charts/ChartCanvas', () => ({ ChartCanvas: () => <div data-testid="chart" /> }));
+// Stage 组件直接驱动 echarts（jsdom 无 canvas getContext）——测导航/旁白时 mock 掉。
+vi.mock('../viz/units/anscombe/AnscombeStage', async () => {
+  const React = await import('react');
+  return { AnscombeStage: React.forwardRef((_p, _r) => React.createElement('div', { 'data-testid': 'anscombe-stage' })) };
+});
+vi.mock('../viz/units/overfitting/OverfittingStage', async () => {
+  const React = await import('react');
+  return { OverfittingStage: React.forwardRef((_p, _r) => React.createElement('div', { 'data-testid': 'overfitting-stage' })) };
+});
 
 describe('VizWorkbench 多单元导航', () => {
   beforeEach(() => useNavStore.setState({ index: 0 }));
@@ -30,7 +39,7 @@ describe('VizWorkbench 多单元导航', () => {
   it('点"过拟合"tab → 渲染过拟合单元内容', () => {
     render(<VizWorkbench />);
     fireEvent.click(screen.getByTitle(/过拟合 · 拟合→正则/));
-    expect(screen.getByText(/学规律，还是背答案/)).toBeInTheDocument();
+    expect(screen.getByText(/藏起来的规律/)).toBeInTheDocument();
     expect(useNavStore.getState().index).toBe(1);
   });
 
