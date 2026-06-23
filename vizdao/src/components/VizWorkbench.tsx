@@ -40,12 +40,12 @@ export function VizWorkbench() {
         })}
       </div>
 
-      {/* 当前单元 */}
-      <div style={{ flex: 1, minHeight: 0, padding: 12 }}>
+      {/* 当前单元（体验单元全幅自带留白；占位讲授页自带内距） */}
+      <div style={{ flex: 1, minHeight: 0 }}>
         {Comp ? (
           <Comp />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, opacity: 0.65 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, opacity: 0.65, padding: 12 }}>
             <div style={{ fontSize: 20 }}>🖥️ 本单元课堂讲授</div>
             <div style={{ fontSize: 14 }}>{meta.title}</div>
             <div style={{ fontSize: 12 }}>此单元用课件 / 现场演示讲授；交互版后续上线。</div>

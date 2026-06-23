@@ -30,8 +30,9 @@ export function TheoryDrawer({ onClose, children }: { onClose: () => void; child
   return (
     <div className="vz-beat-in" style={{
       position: 'absolute', top: 0, right: 0, bottom: 0, width: 416, zIndex: 50,
-      background: 'hsl(var(--background) / 0.98)', borderLeft: '1px solid hsl(var(--border))',
-      padding: 'var(--vz-s5) var(--vz-s6) var(--vz-s6)', overflowY: 'auto', backdropFilter: 'blur(6px)',
+      background: 'hsl(var(--background))', borderLeft: '1px solid hsl(var(--foreground) / 0.14)',
+      boxShadow: '-10px 0 30px hsl(var(--foreground) / 0.10)',
+      padding: 'var(--vz-s5) var(--vz-s6) var(--vz-s6)', overflowY: 'auto',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--vz-s5)' }}>
         <span style={{ fontSize: 'var(--vz-text-lg)', fontWeight: 600 }}>理论深探</span>
