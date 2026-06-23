@@ -45,7 +45,7 @@ interface ConfigState {
   setLocale: (locale: Locale) => void;
   setThinkingMode: (mode: ThinkingMode) => void;
   setTier: (tier: 'flash' | 'pro') => void;
-  applyPreset: (provider: string) => void;
+  applyPreset: () => void;
   validate: () => { valid: boolean; errors: string[] };
 }
 
@@ -106,8 +106,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       return n;
     }),
 
-  // applyPreset kept for backward compat; always applies deepseek regardless of argument
-  applyPreset: (_provider) => {
+  // applyPreset kept for backward compat; always applies deepseek
+  applyPreset: () => {
     set(s => {
       const n = { ...s, provider: 'deepseek', baseUrl: DEEPSEEK_BASE_URL };
       saveConfig(n);

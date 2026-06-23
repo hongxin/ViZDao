@@ -52,8 +52,12 @@ export const useLessonStore = create<LessonState>((set, get) => ({
     const knobValues = { ...s.knobValues, [bindParam]: value };
     // 改噪声需重采样数据；其余只重算
     let data = s.data;
+    // 数据集换新时清除旧的过拟合基准，防止跨数据集误判检查点
+    const priorOverfit = bindParam === 'noiseStd'
+      ? null
+      : s.lastOverfit;
     if (bindParam === 'noiseStd') data = genSinNoise(20, Number(value), DATA_SEED);
-    const r = recompute(knobValues, data, s.lastOverfit, s.checkpointPassed);
+    const r = recompute(knobValues, data, priorOverfit, s.checkpointPassed);
     set({ knobValues, data, ...r });
   },
   resample: () => {
