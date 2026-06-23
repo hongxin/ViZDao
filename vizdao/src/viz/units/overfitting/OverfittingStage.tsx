@@ -8,6 +8,7 @@ import { GridComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { genSinNoise, type Point } from '../../datasets/sinNoise';
 import { normalize, ridgeFit, predict, metrics, XMIN, XMAX } from '../../analysis/ridge';
+import { TheoryPanel } from './TheoryPanel';
 import type { StageHandle, Directive } from '../../engine/types';
 
 echarts.use([ScatterChart, LineChart, GridComponent, CanvasRenderer]);
@@ -77,6 +78,7 @@ export const OverfittingStage = forwardRef<StageHandle>(function OverfittingStag
   const [mode, setMode] = useState<Mode>('blank');
   const [degree, setDegree] = useState(1);
   const [lamRaw, setLamRaw] = useState(0); // 滑杆 0..100 → λ
+  const [theoryOpen, setTheoryOpen] = useState(false);
   const lambda = (lamRaw / 100) ** 2 * 3;
 
   const curveMode = mode === 'fit' || mode === 'truth' || mode === 'rescue';
@@ -140,12 +142,18 @@ export const OverfittingStage = forwardRef<StageHandle>(function OverfittingStag
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--vz-s4)', whiteSpace: 'nowrap' }}>
             {m && <Reading label="训练误差" value={m.trainMSE.toFixed(3)} color={ACCENT} />}
             {m && showTruth && <Reading label="真值误差" value={m.trueMSE.toFixed(3)} color={DANGER} />}
+            {!theoryOpen && (
+              <button onClick={() => setTheoryOpen(true)} style={{ border: 'none', background: 'transparent', color: 'hsl(var(--vz-accent))', cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: 500 }}>∂ 理论深探</button>
+            )}
           </div>
         </div>
       )}
       <div ref={boxRef} style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <div ref={elRef} style={{ position: 'absolute', inset: 0 }} />
       </div>
+      {curveMode && theoryOpen && (
+        <TheoryPanel xn={XN} ys={YS} data={DATA} degree={degree} lambda={lambda} onClose={() => setTheoryOpen(false)} />
+      )}
     </div>
   );
 });
