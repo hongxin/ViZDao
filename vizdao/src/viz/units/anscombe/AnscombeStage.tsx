@@ -26,7 +26,7 @@ function stats(pts: { x: number; y: number }[]) {
   return { a, b, r, mx, my };
 }
 
-type Mode = 'blank' | 'raw' | 'stats' | 'quartet' | 'focus';
+type Mode = 'blank' | 'raw' | 'fit' | 'stats' | 'quartet' | 'focus';
 
 const GRID_POS = [
   { left: '6%', top: '9%', width: '40%', height: '37%' },
@@ -90,18 +90,40 @@ function focusOption(outlierY: number) {
   };
 }
 
+/** "你来当建模师"：第一组点 + 一条由两端点(p0@x=0, p1@x=20)定义的可拖直线 + 实时残差平方和。 */
+function fitOption(p0: number, p1: number) {
+  const slope = (p1 - p0) / 20, intercept = p0;
+  const sse = ANSCOMBE.I.reduce((s, pt) => s + (pt.y - (intercept + slope * pt.x)) ** 2, 0);
+  return {
+    animation: false,
+    title: [
+      { text: '你来当建模师 · 第一组', left: '9%', top: '4%', textStyle: { fontSize: 14, fontWeight: 400 as const, color: 'hsl(0 0% 42%)' } },
+      { text: `误差 (残差平方和)  ${sse.toFixed(1)}`, right: '7%', top: '4%', textStyle: { fontSize: 14, fontWeight: 500 as const, color: ACCENT, fontFamily: 'ui-monospace, monospace' } },
+    ],
+    grid: [{ left: '9%', right: '7%', top: '13%', bottom: '12%' }],
+    xAxis: [{ type: 'value' as const, min: 0, max: 20, splitNumber: 5, ...AXIS }],
+    yAxis: [{ type: 'value' as const, min: 2, max: 14, splitNumber: 4, ...AXIS }],
+    series: [
+      { type: 'line' as const, showSymbol: false, lineStyle: { color: ACCENT, width: 2.5 }, data: [[0, p0], [20, p1]] },
+      { type: 'scatter' as const, symbolSize: 9, itemStyle: { color: POINT }, data: ANSCOMBE.I.map((p) => [p.x, p.y]) },
+    ],
+  };
+}
+
 export const AnscombeStage = forwardRef<StageHandle>(function AnscombeStage(_props, ref) {
   const elRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
   const [mode, setMode] = useState<Mode>('blank');
   const [showReg, setShowReg] = useState(false);
   const outlierRef = useRef(12.5); // 组 IV 离群点初始 y
+  const fitRef = useRef({ p0: 9, p1: 5 }); // "你来当建模师"：可拖直线两端点 y（初值故意拟合得很差）
   const [, force] = useState(0);
 
   useImperativeHandle(ref, () => ({
     apply(directives: Directive[]) {
       for (const d of directives) {
         if (d.op === 'showRawData') { setMode('raw'); }
+        else if (d.op === 'fitLine') { fitRef.current = { p0: 9, p1: 5 }; setMode('fit'); }
         else if (d.op === 'showStats') { setMode('stats'); }
         else if (d.op === 'morphQuartet') { setShowReg(false); setMode('quartet'); }
         else if (d.op === 'dropRegLines') { setShowReg(true); }
@@ -124,8 +146,35 @@ export const AnscombeStage = forwardRef<StageHandle>(function AnscombeStage(_pro
     if (!chart) return;
     if (mode === 'quartet') chart.setOption(quartetOption(showReg), true);
     else if (mode === 'focus') chart.setOption(focusOption(outlierRef.current), true);
+    else if (mode === 'fit') chart.setOption(fitOption(fitRef.current.p0, fitRef.current.p1), true);
     else chart.clear();
   }, [mode, showReg]);
+
+  // fit 模式："你来当建模师"——两端点可拖，亲手拟合直线，实时看残差平方和缩小。
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || mode !== 'fit') return;
+    let raf = 0;
+    const place = () => {
+      const f = fitRef.current;
+      const handles = ([['p0', 0, f.p0], ['p1', 20, f.p1]] as const).map(([key, x, y]) => {
+        const [px, py] = chart.convertToPixel({ gridIndex: 0 }, [x, y]);
+        return {
+          type: 'circle' as const, shape: { r: 10 }, position: [px, py], z: 100,
+          style: { fill: ACCENT, stroke: '#fff', lineWidth: 2 }, draggable: 'vertical' as const, cursor: 'ns-resize',
+          ondrag(this: { y: number }) {
+            const dataY = chart.convertFromPixel({ gridIndex: 0 }, [px, this.y])[1];
+            fitRef.current = { ...fitRef.current, [key]: Math.max(2, Math.min(14, dataY)) };
+            chart.setOption(fitOption(fitRef.current.p0, fitRef.current.p1), true, true);
+            cancelAnimationFrame(raf); raf = requestAnimationFrame(place);
+          },
+        };
+      });
+      chart.setOption({ graphic: handles });
+    };
+    const id = setTimeout(place, 60);
+    return () => { clearTimeout(id); cancelAnimationFrame(raf); };
+  }, [mode]);
 
   // focus 模式：给离群点装一个可拖的 graphic，拖动 → 改 y → 回归线实时崩塌。
   useEffect(() => {
