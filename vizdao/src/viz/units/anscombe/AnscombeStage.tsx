@@ -35,12 +35,18 @@ const GRID_POS = [
   { left: '54%', top: '56%', width: '40%', height: '37%' },
 ];
 
-const AXIS_BARE = { axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLine: { show: false } };
+// 干净但完整的坐标系：轴线 + 刻度 + 标签 + 浅网格——可视化必须有参照系。
+const AXIS = {
+  axisLabel: { show: true, fontSize: 10, color: 'hsl(0 0% 58%)', margin: 6 },
+  axisTick: { show: true, length: 3, lineStyle: { color: 'hsl(0 0% 78%)' } },
+  splitLine: { show: true, lineStyle: { color: 'hsl(0 0% 92%)' } },
+  axisLine: { show: true, lineStyle: { color: 'hsl(0 0% 78%)' } },
+};
 
 function quartetOption(showReg: boolean) {
   const grid = GRID_POS.map((g) => ({ ...g }));
-  const xAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 1, max: 20, ...AXIS_BARE }));
-  const yAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 2, max: 14, ...AXIS_BARE }));
+  const xAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 0, max: 20, splitNumber: 4, ...AXIS }));
+  const yAxis = GROUPS.map((_, i) => ({ gridIndex: i, type: 'value' as const, min: 2, max: 14, splitNumber: 3, ...AXIS }));
   const groupTitles = GROUPS.map((g, i) => ({
     text: `组 ${g}`, left: GRID_POS[i].left, top: i < 2 ? '3.5%' : '50.5%',
     textStyle: { fontSize: 13, fontWeight: 400 as const, color: 'hsl(0 0% 55%)' },
@@ -63,7 +69,7 @@ function quartetOption(showReg: boolean) {
   }));
   const lines = showReg ? GROUPS.map((g, i) => {
     const { a, b } = stats(ANSCOMBE[g]);
-    return { type: 'line' as const, xAxisIndex: i, yAxisIndex: i, showSymbol: false, lineStyle: { color: ACCENT, width: 2 }, data: [[1, a + b * 1], [20, a + b * 20]], animationDuration: MOTION.reveal, animationEasing: 'cubicInOut' as const };
+    return { type: 'line' as const, xAxisIndex: i, yAxisIndex: i, showSymbol: false, lineStyle: { color: ACCENT, width: 2 }, data: [[0, a], [20, a + b * 20]], animationDuration: MOTION.reveal, animationEasing: 'cubicInOut' as const };
   }) : [];
   return { animation: true, title, grid, xAxis, yAxis, series: [...scatter, ...lines] };
 }
@@ -74,11 +80,11 @@ function focusOption(outlierY: number) {
   return {
     animation: true, animationDuration: MOTION.quick,
     title: [{ text: '组 IV', left: '8%', top: '4%', textStyle: { fontSize: 14, fontWeight: 400 as const, color: 'hsl(0 0% 42%)' } }],
-    grid: [{ left: '10%', right: '8%', top: '12%', bottom: '12%' }],
-    xAxis: [{ type: 'value' as const, min: 2, max: 20, splitLine: { show: false } }],
-    yAxis: [{ type: 'value' as const, min: 2, max: 14, splitLine: { show: false } }],
+    grid: [{ left: '9%', right: '7%', top: '12%', bottom: '12%' }],
+    xAxis: [{ type: 'value' as const, min: 0, max: 20, splitNumber: 5, ...AXIS }],
+    yAxis: [{ type: 'value' as const, min: 2, max: 14, splitNumber: 4, ...AXIS }],
     series: [
-      { type: 'line' as const, showSymbol: false, lineStyle: { color: ACCENT, width: 2.5 }, data: [[2, a + b * 2], [20, a + b * 20]] },
+      { type: 'line' as const, showSymbol: false, lineStyle: { color: ACCENT, width: 2.5 }, data: [[0, a], [20, a + b * 20]] },
       { type: 'scatter' as const, symbolSize: 9, itemStyle: { color: POINT }, data: base.map((p) => [p.x, p.y]) },
     ],
   };
@@ -204,7 +210,9 @@ function RawDataOverlay() {
 function StatsOverlay() {
   const rows = GROUPS.map((g) => {
     const s = stats(ANSCOMBE[g]);
-    return { g, mx: s.mx.toFixed(1), my: s.my.toFixed(2), r: s.r.toFixed(3) };
+    // r 用 2 位小数：四组真值 0.8162~0.8165，唯组 IV 在第 3 位进位成 0.817；
+    // 取 2 位精度让四组诚实地完全相同（0.82），守住"完全相同"的逻辑。
+    return { g, mx: s.mx.toFixed(1), my: s.my.toFixed(2), r: s.r.toFixed(2) };
   });
   return (
     <div className="vz-beat-in" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
