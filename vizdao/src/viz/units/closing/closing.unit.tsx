@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { ClosingStage } from './ClosingStage';
 import { Player } from '../../engine/Player';
+import { Workbench } from '../../workbench/Workbench';
 import type { ConceptScript, StageHandle } from '../../engine/types';
 
 const CLOSING_CONCEPT: ConceptScript = {
@@ -21,7 +22,7 @@ const CLOSING_CONCEPT: ConceptScript = {
 export function ClosingUnit() {
   const stageRef = useRef<StageHandle>(null);
   const [done, setDone] = useState(false);
-  const [runKey, setRunKey] = useState(0);
+  const [runKey] = useState(0);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
@@ -34,17 +35,8 @@ export function ClosingUnit() {
           onComplete={() => setDone(true)}
         />
       ) : (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'hsl(var(--background) / 0.85)' }}>
-          <div className="vz-beat-in" style={{ textAlign: 'center', maxWidth: 'var(--vz-measure)' }}>
-            <p style={{ fontSize: 'var(--vz-text-2xl)', margin: '0 0 var(--vz-s2)', fontWeight: 600 }}>看见，胜过计算。</p>
-            <p style={{ fontSize: 'var(--vz-text-base)', color: 'hsl(var(--vz-ink-soft))', margin: '0 0 var(--vz-s4)' }}>
-              模型都会骗你；可视化，是你戳穿它的眼睛。下一步，你来指挥 AI，一起看。
-            </p>
-            <button onClick={() => { setDone(false); setRunKey((k) => k + 1); }} style={{ fontSize: 'var(--vz-text-base)', color: 'hsl(var(--vz-accent))', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
-              ↻ 重新体验
-            </button>
-          </div>
-        </div>
+        // 暗线收口 → 交棒 → 「训·知道」工作台：轮到学员对真数据出手。
+        <Workbench key={`wb-${runKey}`} />
       )}
     </div>
   );
