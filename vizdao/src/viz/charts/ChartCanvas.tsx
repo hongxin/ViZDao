@@ -1,11 +1,12 @@
 // src/viz/charts/ChartCanvas.tsx — ECharts 6 封装：option 变 → 重绘。
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
-import { LineChart, ScatterChart } from 'echarts/charts';
+import { LineChart, ScatterChart, BarChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
-echarts.use([LineChart, ScatterChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
+// 注册各单元用到的全部图表类型：line(过拟合/KDE)、scatter(安斯库姆/高维/聚类)、bar(直方图)。
+echarts.use([LineChart, ScatterChart, BarChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 export function ChartCanvas({ option }: { option: object }) {
   const ref = useRef<HTMLDivElement>(null);
