@@ -3,6 +3,7 @@
 // 可在 React 外用 useWorkbenchStore.getState().<action>() 直改（供 AI 分析工具调用）。
 import { create } from 'zustand';
 import type { Expr } from '../viz/analysis/expr';
+import { defaultDataset, datasetById, type Dataset } from '../viz/datasets';
 
 export type ChartKind = 'scatter' | 'line' | 'bar' | 'hist';
 export type Agg = 'mean' | 'sum' | 'count' | 'min' | 'max';
@@ -25,39 +26,33 @@ export interface ViewSpec {
 
 /** 执行顺序：筛选 → 派生 → 分组(by+agg) → 排序/取前N → 画。by+agg 对所有图型生效（分组成任意图）。 */
 
-export const MISSION = '找出 Bike-Sharing 里最反直觉的一条规律，用多视图为它辩护。';
-
-/** 初始四视图：温度反转 / 时间序列 / 天气 / 用户类型分裂。 */
-export const INITIAL_VIEWS: ViewSpec[] = [
-  { id: 'v1', chart: 'scatter', x: 'temp', y: 'cnt', title: '气温 × 总租车量' },
-  { id: 'v2', chart: 'line', x: 'dteday', y: 'cnt', title: '总租车量 · 时间序列' },
-  { id: 'v3', chart: 'bar', by: 'weathersit', y: 'cnt', agg: 'mean', title: '平均租车量 · 按天气' },
-  { id: 'v4', chart: 'scatter', x: 'registered', y: 'casual', color: 'workingday', title: '注册 × 临时（按是否工作日）' },
-];
-
-let seq = INITIAL_VIEWS.length;
-export function nextViewId(): string { return `v${++seq}`; }
+let seq = 0;
+export function nextViewId(): string { return `nx${++seq}`; }
 
 interface WorkbenchState {
+  dataset: Dataset;             // 当前数据集（可切换：共享单车 / 企业税负 …）
   views: ViewSpec[];
-  selection: number[] | null;   // 选中的 BIKE 记录下标；null = 未选
+  selection: number[] | null;   // 选中的行下标（索引 dataset.rows）；null = 未选
   mission: string;
   addView: (v: ViewSpec) => void;
   removeView: (id: string) => void;
   updateView: (id: string, patch: Partial<ViewSpec>) => void;
   setViews: (views: ViewSpec[]) => void;
   setSelection: (idx: number[] | null) => void;
+  setDataset: (id: string) => void;   // 切换数据集：重置视图为该数据集的初始视图、清选区
   reset: () => void;
 }
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
-  views: INITIAL_VIEWS,
+  dataset: defaultDataset,
+  views: defaultDataset.initialViews,
   selection: null,
-  mission: MISSION,
+  mission: defaultDataset.mission,
   addView: (v) => set((s) => ({ views: [...s.views, v] })),
   removeView: (id) => set((s) => ({ views: s.views.filter((v) => v.id !== id) })),
   updateView: (id, patch) => set((s) => ({ views: s.views.map((v) => (v.id === id ? { ...v, ...patch } : v)) })),
   setViews: (views) => set({ views }),
   setSelection: (idx) => set({ selection: idx && idx.length ? idx : null }),
-  reset: () => set({ views: INITIAL_VIEWS, selection: null }),
+  setDataset: (id) => { const d = datasetById(id); set({ dataset: d, views: d.initialViews, selection: null, mission: d.mission }); },
+  reset: () => set((s) => ({ views: s.dataset.initialViews, selection: null })),
 }));

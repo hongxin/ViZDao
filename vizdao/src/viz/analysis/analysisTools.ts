@@ -3,12 +3,13 @@
 import type { Tool } from '../../types/tool';
 import type { ToolRegistry } from '../../tools/ToolRegistry';
 import { useWorkbenchStore, nextViewId, type ChartKind, type Agg } from '../../store/workbenchStore';
-import { BIKE, BIKE_FIELDS, type BikeDay } from '../datasets/bikeSharing';
 
-const FIELDS = Object.keys(BIKE_FIELDS);
-const val = (d: BikeDay, f: string): number => (f === 'dteday' ? Date.parse(d.dteday) : (d as unknown as Record<string, number>)[f]);
-const fieldEnum = { type: 'string' as const, enum: FIELDS };
-const labelOf = (f: string) => BIKE_FIELDS[f]?.label ?? f;
+// 数据集无关：所有工具读 active dataset（共享单车 / 企业税负 …）。列名用 list_fields 查。
+const ds = () => useWorkbenchStore.getState().dataset;
+const rows = () => ds().rows;
+const labelOf = (f: string) => ds().fields[f]?.label ?? f;
+const numFields = () => Object.keys(ds().fields).filter((k) => ds().fields[k].kind === 'num');
+const fieldEnum = { type: 'string' as const };
 
 function addView(): Tool {
   return {
@@ -112,12 +113,12 @@ function selectWhere(): Tool {
     async execute(p) {
       const f = p.field as string, cmp = p.cmp as string, v = Number(p.value);
       const idx: number[] = [];
-      BIKE.forEach((d, i) => {
-        const x = val(d, f);
+      rows().forEach((r, i) => {
+        const x = r[f];
         if ((cmp === '>' && x > v) || (cmp === '<' && x < v) || (cmp === '>=' && x >= v) || (cmp === '<=' && x <= v) || (cmp === '==' && x === v)) idx.push(i);
       });
       useWorkbenchStore.getState().setSelection(idx);
-      return `选中 ${idx.length} 天（${labelOf(f)} ${cmp} ${v}）。`;
+      return `选中 ${idx.length} 条（${labelOf(f)} ${cmp} ${v}）。`;
     },
   };
 }
@@ -143,11 +144,11 @@ function selectExtreme(): Tool {
     permission: 'safe',
     async execute(p) {
       const f = p.field as string, end = p.end as string, frac = Math.max(0.01, Math.min(1, Number(p.fraction)));
-      const order = BIKE.map((d, i) => ({ i, x: val(d, f) })).sort((a, b) => a.x - b.x);
+      const order = rows().map((r, i) => ({ i, x: r[f] })).sort((a, b) => a.x - b.x);
       const k = Math.max(1, Math.round(order.length * frac));
       const picked = (end === 'top' ? order.slice(-k) : order.slice(0, k)).map((o) => o.i);
       useWorkbenchStore.getState().setSelection(picked);
-      return `选中 ${picked.length} 天（${labelOf(f)} ${end === 'top' ? '最高' : '最低'} ${Math.round(frac * 100)}%）。`;
+      return `选中 ${picked.length} 条（${labelOf(f)} ${end === 'top' ? '最高' : '最低'} ${Math.round(frac * 100)}%）。`;
     },
   };
 }
@@ -166,31 +167,45 @@ function summarize(): Tool {
       type: 'function',
       function: {
         name: 'summarize',
-        description: '统计当前选区（没选区则全体）的关键指标：天数、总租车量/注册/临时/气温的均值。给定 by 则按该分类列分组对比（用于揭示分组间的相反规律）。',
-        parameters: { type: 'object', properties: { by: { ...fieldEnum, description: '分组列（可选，如 workingday）' } }, required: [] },
+        description: '统计当前选区（没选区则全体）：条数 + 各数值列均值。给定 by 则按该分类列分组对比（揭示分组间的相反规律，如辛普森悖论）。',
+        parameters: { type: 'object', properties: { by: { ...fieldEnum, description: '分组列（可选）' } }, required: [] },
       },
     },
     permission: 'safe',
     async execute(p) {
       const sel = useWorkbenchStore.getState().selection;
-      const idxs = sel ?? BIKE.map((_, i) => i);
+      const rs = rows();
+      const idxs = sel ?? rs.map((_, i) => i);
+      const nums = numFields();
       const stat = (ii: number[]) => {
         const n = ii.length || 1;
-        const m = (f: string) => Math.round(ii.reduce((s, i) => s + val(BIKE[i], f), 0) / n);
-        return { 天数: ii.length, 总租车量: m('cnt'), 注册: m('registered'), 临时: m('casual'), 气温: Math.round(ii.reduce((s, i) => s + BIKE[i].temp, 0) / n * 10) / 10 };
+        const o: Record<string, number> = { 条数: ii.length };
+        for (const f of nums) o[labelOf(f)] = Math.round(ii.reduce((s, i) => s + (rs[i][f] ?? 0), 0) / n * 100) / 100;
+        return o;
       };
-      const scope = sel ? `选区(${idxs.length}天)` : '全体731天';
+      const scope = sel ? `选区(${idxs.length}条)` : `全体${rs.length}条`;
       if (p.by) {
         const by = p.by as string;
-        const cats = [...new Set(idxs.map((i) => val(BIKE[i], by)))].sort((a, b) => a - b);
-        const rows = cats.map((c) => ({ [labelOf(by)]: c, ...stat(idxs.filter((i) => val(BIKE[i], by) === c)) }));
-        return `${scope} 按「${labelOf(by)}」分组：\n${JSON.stringify(rows)}`;
+        const cats = [...new Set(idxs.map((i) => rs[i][by]))].sort((a, b) => a - b);
+        const grouped = cats.map((c) => ({ [labelOf(by)]: ds().catLabels[by]?.[c] ?? c, ...stat(idxs.filter((i) => rs[i][by] === c)) }));
+        return `${scope} 按「${labelOf(by)}」分组：\n${JSON.stringify(grouped)}`;
       }
       return `${scope}：${JSON.stringify(stat(idxs))}`;
     },
   };
 }
 
+function listFields(): Tool {
+  return {
+    definition: { type: 'function', function: { name: 'list_fields', description: '查看当前数据集的名称、探究任务、所有列(列名/标签/类型)与类别取值。开始分析前先调它，了解能用哪些列。', parameters: { type: 'object', properties: {}, required: [] } } },
+    permission: 'safe',
+    async execute() {
+      const d = ds();
+      return JSON.stringify({ 数据集: d.name, 任务: d.mission, 列: Object.entries(d.fields).map(([k, f]) => ({ 列名: k, 标签: f.label, 类型: f.kind })), 类别取值: d.catLabels });
+    },
+  };
+}
+
 export function registerAnalysisTools(registry: ToolRegistry): void {
-  [addView, updateView, removeView, listViews, selectWhere, selectExtreme, clearSelection, summarize].forEach((f) => registry.register(f()));
+  [listFields, addView, updateView, removeView, listViews, selectWhere, selectExtreme, clearSelection, summarize].forEach((f) => registry.register(f()));
 }

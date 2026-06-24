@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useWorkbenchStore, INITIAL_VIEWS } from './workbenchStore';
+import { useWorkbenchStore } from './workbenchStore';
 
 describe('workbenchStore · ViewBus', () => {
-  beforeEach(() => useWorkbenchStore.getState().reset());
+  beforeEach(() => useWorkbenchStore.getState().setDataset('bike'));
 
   it('初始装四视图、无选区', () => {
     const s = useWorkbenchStore.getState();
@@ -39,7 +39,17 @@ describe('workbenchStore · ViewBus', () => {
     s.addView({ id: 'z', chart: 'bar', by: 'season', y: 'cnt', agg: 'mean' });
     s.setSelection([1]);
     s.reset();
-    expect(useWorkbenchStore.getState().views).toEqual(INITIAL_VIEWS);
+    expect(useWorkbenchStore.getState().views).toEqual(useWorkbenchStore.getState().dataset.initialViews);
     expect(useWorkbenchStore.getState().selection).toBeNull();
+  });
+
+  it('setDataset 切到税务：换数据集与初始视图', () => {
+    const s = useWorkbenchStore.getState();
+    s.setDataset('tax');
+    const st = useWorkbenchStore.getState();
+    expect(st.dataset.id).toBe('tax');
+    expect(st.dataset.name).toBe('企业税负');
+    expect(st.views).toBe(st.dataset.initialViews);
+    expect(st.selection).toBeNull();
   });
 });

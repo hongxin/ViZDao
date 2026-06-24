@@ -2,13 +2,13 @@
 // 块：vz_view(视图,带筛选槽+新列槽) · vz_derive(新列=表达式) · expr_field/num/arith/cmp/logic(表达式)。
 // 与 ViewSpec(含 derive/filter:Expr) 嵌套互译。三通道共用同一 IR。
 import * as Blockly from 'blockly';
-import { BIKE_FIELDS } from '../../datasets/bikeSharing';
-import type { ViewSpec } from '../../../store/workbenchStore';
+import { useWorkbenchStore, type ViewSpec } from '../../../store/workbenchStore';
 import { stateToSpecs, NONE } from './serialize';
 
 export { specsToState, stateToSpecs, canon } from './serialize';
 
-const FIELD_OPTS: [string, string][] = Object.entries(BIKE_FIELDS).map(([k, f]) => [f.label, k]);
+// 字段选项随当前数据集动态变化（块定义一次，下拉每次打开时读 active dataset）。
+const fieldOptsBase = (): [string, string][] => Object.entries(useWorkbenchStore.getState().dataset.fields).map(([k, f]) => [f.label, k]);
 const CHART_OPTS: [string, string][] = [['散点', 'scatter'], ['折线', 'line'], ['柱状', 'bar']];
 const AGG_OPTS: [string, string][] = [['均值', 'mean'], ['求和', 'sum'], ['计数', 'count'], ['最小', 'min'], ['最大', 'max']];
 const DIR_OPTS: [string, string][] = [['↑升', 'asc'], ['↓降', 'desc']];
@@ -24,7 +24,7 @@ function fieldOptsGen(withNone: boolean) {
   return function (this: any): [string, string][] {
     const blk = this?.getSourceBlock?.();
     const names = blk ? deriveNamesOf(blk) : [];
-    const opts: [string, string][] = [...FIELD_OPTS, ...names.map((n) => [n, n] as [string, string])];
+    const opts: [string, string][] = [...fieldOptsBase(), ...names.map((n) => [n, n] as [string, string])];
     // 保留当前值：派生名作 x/y 时，加载顺序可能早于 DERIVE 子块——确保它始终是合法选项，不被 Blockly 丢弃。
     const cur = this?.getValue?.();
     if (cur && cur !== NONE && !opts.some((o) => o[1] === cur)) opts.push([cur, cur]);
@@ -37,7 +37,7 @@ export function defineViewBlock(): void {
   if (Blockly.Blocks['vz_view']) return;
   const D = Blockly.Blocks as any;
 
-  D['expr_field'] = { init(this: any) { this.appendDummyInput().appendField(new Blockly.FieldDropdown(FIELD_OPTS), 'name'); this.setOutput(true, 'Number'); this.setColour('#2e7ebb'); this.setTooltip('数据列'); } };
+  D['expr_field'] = { init(this: any) { this.appendDummyInput().appendField(new Blockly.FieldDropdown(() => fieldOptsBase()), 'name'); this.setOutput(true, 'Number'); this.setColour('#2e7ebb'); this.setTooltip('数据列'); } };
   D['expr_num'] = { init(this: any) { this.appendDummyInput().appendField(new Blockly.FieldNumber(0), 'num'); this.setOutput(true, 'Number'); this.setColour('#2e7ebb'); } };
   D['expr_arith'] = { init(this: any) {
     this.appendValueInput('A').setCheck('Number');

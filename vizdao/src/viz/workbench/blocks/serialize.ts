@@ -1,10 +1,9 @@
 // src/viz/workbench/blocks/serialize.ts — 积木 ↔ ViewSpec 的纯互译（不依赖 Blockly，可单测往返）。
-import { BIKE_FIELDS } from '../../datasets/bikeSharing';
-import { nextViewId, type ViewSpec, type ChartKind, type Agg } from '../../../store/workbenchStore';
+import { useWorkbenchStore, nextViewId, type ViewSpec, type ChartKind, type Agg } from '../../../store/workbenchStore';
 import type { Expr } from '../../analysis/expr';
 
 export const NONE = '·none';
-const label = (k?: string) => (k ? BIKE_FIELDS[k]?.label ?? k : '');
+const label = (k?: string) => (k ? useWorkbenchStore.getState().dataset.fields[k]?.label ?? k : '');
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function exprToBlock(e: Expr): any {

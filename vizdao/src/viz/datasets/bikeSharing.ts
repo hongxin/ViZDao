@@ -764,3 +764,33 @@ export const BIKE: BikeDay[] = RAW.map((r, i) => ({
   season: r[0], yr: r[1], mnth: r[2], holiday: r[3], weekday: r[4], workingday: r[5], weathersit: r[6],
   temp: r[7], atemp: r[8], hum: r[9], windspeed: r[10], casual: r[11], registered: r[12], cnt: r[13],
 }));
+
+// ---- 包装为可插拔 Dataset ----
+import type { Dataset } from './types';
+import type { Row } from '../analysis/expr';
+import type { ViewSpec } from '../../store/workbenchStore';
+
+const BIKE_CAT_LABELS: Dataset['catLabels'] = {
+  workingday: { 0: '非工作日', 1: '工作日' }, holiday: { 0: '平日', 1: '节假日' },
+  weathersit: { 1: '晴/少云', 2: '雾/阴', 3: '小雨雪', 4: '暴雨雪' },
+  season: { 1: '春', 2: '夏', 3: '秋', 4: '冬' }, yr: { 0: '2011', 1: '2012' },
+  weekday: { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' },
+};
+const BIKE_BASE_FIELDS = ['season', 'yr', 'mnth', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'atemp', 'hum', 'windspeed', 'casual', 'registered', 'cnt'];
+const BIKE_ROWS: Row[] = BIKE.map((d) => {
+  const r: Row = { dteday: Date.parse(d.dteday) };
+  for (const f of BIKE_BASE_FIELDS) r[f] = (d as unknown as Record<string, number>)[f];
+  return r;
+});
+const BIKE_INITIAL_VIEWS: ViewSpec[] = [
+  { id: 'v1', chart: 'scatter', x: 'temp', y: 'cnt', title: '气温 × 总租车量' },
+  { id: 'v2', chart: 'line', x: 'dteday', y: 'cnt', title: '总租车量 · 时间序列' },
+  { id: 'v3', chart: 'bar', by: 'weathersit', y: 'cnt', agg: 'mean', title: '平均租车量 · 按天气' },
+  { id: 'v4', chart: 'scatter', x: 'registered', y: 'casual', color: 'workingday', title: '注册 × 临时（按是否工作日）' },
+];
+
+export const bikeDataset: Dataset = {
+  id: 'bike', name: '共享单车', rows: BIKE_ROWS, fields: BIKE_FIELDS, catLabels: BIKE_CAT_LABELS,
+  baseFields: BIKE_BASE_FIELDS, dateField: 'dteday', initialViews: BIKE_INITIAL_VIEWS,
+  mission: '找出 Bike-Sharing 里最反直觉的一条规律，用多视图为它辩护。',
+};

@@ -1,6 +1,9 @@
-// src/viz/datasets/ — 数据集管理（占位）
-//
-// 计划：内置样例数据集、CSV/JSON 上传（复用 FileBridge/VirtualFS）、清洗与变换。
-// 持久化复用 lib/db.ts。待深入规划后实现。
+// src/viz/datasets/index.ts — 数据集注册表。
+import { bikeDataset } from './bikeSharing';
+import { taxDataset } from './taxBurden';
+import type { Dataset } from './types';
 
-export const DATASETS_PLACEHOLDER = true;
+export type { Dataset, FieldKind } from './types';
+export const DATASETS: Dataset[] = [bikeDataset, taxDataset];
+export const defaultDataset = bikeDataset;
+export function datasetById(id: string): Dataset { return DATASETS.find((d) => d.id === id) ?? defaultDataset; }

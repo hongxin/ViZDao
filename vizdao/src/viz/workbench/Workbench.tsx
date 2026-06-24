@@ -6,10 +6,10 @@ import { AiPanel } from './AiPanel';
 import { BlocklyPanel } from './BlocklyPanel';
 import { ClosingTheory } from '../units/closing/ClosingTheory';
 import { useWorkbenchStore, nextViewId, type ViewSpec, type ChartKind } from '../../store/workbenchStore';
-import { BIKE_FIELDS } from '../datasets/bikeSharing';
+import { DATASETS } from '../datasets';
 
 const ACCENT = 'hsl(var(--vz-accent))';
-const FIELD_KEYS = Object.keys(BIKE_FIELDS);
+const fieldLabel = (k: string) => useWorkbenchStore.getState().dataset.fields[k]?.label ?? k;
 const CHARTS: ChartKind[] = ['scatter', 'line', 'bar'];
 const CHART_LABEL: Record<ChartKind, string> = { scatter: '散点', line: '折线', bar: '柱状', hist: '直方' };
 
@@ -18,13 +18,14 @@ function Sel({ value, onChange, options, allowNone }: { value: string | undefine
     <select value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}
       style={{ fontSize: 'var(--vz-text-sm)', padding: '0.15rem 0.3rem', borderRadius: 5, border: '1px solid hsl(var(--border))', background: 'transparent', color: 'hsl(var(--foreground))', maxWidth: '6.2rem' }}>
       {allowNone && <option value="">（无）</option>}
-      {options.map((k) => <option key={k} value={k}>{BIKE_FIELDS[k]?.label ?? k}</option>)}
+      {options.map((k) => <option key={k} value={k}>{fieldLabel(k)}</option>)}
     </select>
   );
 }
 
 function ViewEditor({ spec }: { spec: ViewSpec }) {
   const { updateView, removeView } = useWorkbenchStore();
+  const FIELD_KEYS = Object.keys(useWorkbenchStore.getState().dataset.fields);
   return (
     <div style={{ border: '1px solid hsl(var(--border))', borderRadius: 8, padding: '0.5rem 0.6rem', marginBottom: 'var(--vz-s2)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
@@ -52,6 +53,8 @@ export function Workbench() {
   const setSelection = useWorkbenchStore((s) => s.setSelection);
   const addView = useWorkbenchStore((s) => s.addView);
   const mission = useWorkbenchStore((s) => s.mission);
+  const dataset = useWorkbenchStore((s) => s.dataset);
+  const setDataset = useWorkbenchStore((s) => s.setDataset);
   const [theory, setTheory] = useState<null | 'analysis' | 'method'>(null);
   const [leftTab, setLeftTab] = useState<'gui' | 'ai' | 'blocks'>('gui');
 
@@ -59,10 +62,18 @@ export function Workbench() {
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'hsl(var(--background))' }}>
       {/* 任务栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--vz-s3)', padding: '0.5rem var(--vz-s4)', borderBottom: '1px solid hsl(var(--border))' }}>
-        <span style={{ fontSize: 'var(--vz-text-sm)', color: selection ? ACCENT : 'hsl(var(--vz-ink-soft))' }}>
-          {selection ? `已选 ${selection.length} 天 · 看它们在各视图里的位置` : `任务 · ${mission}`}
+        <span style={{ display: 'inline-flex', gap: 'var(--vz-s3)', alignItems: 'center', minWidth: 0 }}>
+          <span style={{ display: 'inline-flex', border: '1px solid hsl(var(--border))', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}>
+            {DATASETS.map((d) => (
+              <button key={d.id} onClick={() => setDataset(d.id)}
+                style={{ padding: '0.15rem 0.55rem', border: 'none', cursor: 'pointer', fontSize: 'var(--vz-text-sm)', background: dataset.id === d.id ? ACCENT : 'transparent', color: dataset.id === d.id ? 'white' : 'hsl(var(--vz-ink-soft))' }}>{d.name}</button>
+            ))}
+          </span>
+          <span style={{ fontSize: 'var(--vz-text-sm)', color: selection ? ACCENT : 'hsl(var(--vz-ink-soft))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {selection ? `已选 ${selection.length} 条 · 看它们在各视图里的位置` : `任务 · ${mission}`}
+          </span>
         </span>
-        <span style={{ display: 'inline-flex', gap: 'var(--vz-s3)', alignItems: 'center' }}>
+        <span style={{ display: 'inline-flex', gap: 'var(--vz-s3)', alignItems: 'center', flexShrink: 0 }}>
           {selection && <button onClick={() => setSelection(null)} style={{ border: 'none', background: 'transparent', color: 'hsl(var(--vz-ink-soft))', cursor: 'pointer', fontSize: 'var(--vz-text-sm)' }}>清除选区</button>}
           <span style={{ fontSize: 'var(--vz-text-sm)', color: 'hsl(var(--vz-ink-soft))' }}>理论深探</span>
           <button onClick={() => setTheory('analysis')} style={{ border: 'none', background: 'transparent', color: ACCENT, cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: 500 }}>① 视觉分析</button>

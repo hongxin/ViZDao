@@ -1,13 +1,13 @@
-// src/viz/workbench/LinkedView.tsx — 一个刷选-联动视图。
+// src/viz/workbench/LinkedView.tsx — 一个刷选-联动视图（数据集无关：据当前 dataset 运行）。
 // 执行：基础+派生列 → 筛选 → 分组(by+agg,对所有图型) → 排序/取前N → 画。
-// 每个渲染行记录其 BIKE 成员下标(idxGroups)：分组视图刷选选中整组成员，联动照常。
+// 每个渲染行记录其行下标(idxGroups,索引 dataset.rows)：分组视图刷选选中整组成员，联动照常。
 import { useEffect, useMemo, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { ScatterChart, LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, BrushComponent, ToolboxComponent, TitleComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { BIKE, type BikeDay } from '../datasets/bikeSharing';
 import { useWorkbenchStore, type ViewSpec, type Agg } from '../../store/workbenchStore';
+import type { Dataset } from '../datasets';
 import { evalNum, evalBool, type Row } from '../analysis/expr';
 
 echarts.use([ScatterChart, LineChart, BarChart, GridComponent, TooltipComponent, BrushComponent, ToolboxComponent, TitleComponent, LegendComponent, CanvasRenderer]);
@@ -17,20 +17,9 @@ const DIM = 'rgba(120,125,135,0.18)';
 const NEUTRAL = '#6b7280';
 const CAT_PALETTE = ['#e8743b', '#2e7ebb', '#3b9c5a', '#a855f7', '#eab308', '#06b6d4', '#ec4899'];
 
-const CAT_LABELS: Record<string, Record<number, string>> = {
-  workingday: { 0: '非工作日', 1: '工作日' }, holiday: { 0: '平日', 1: '节假日' },
-  weathersit: { 1: '晴/少云', 2: '雾/阴', 3: '小雨雪', 4: '暴雨雪' },
-  season: { 1: '春', 2: '夏', 3: '秋', 4: '冬' }, yr: { 0: '2011', 1: '2012' },
-  weekday: { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' },
-};
-const catLabel = (f: string, v: number) => CAT_LABELS[f]?.[v] ?? (Number.isInteger(v) ? String(v) : v.toFixed(1));
+const catLabel = (ds: Dataset, f: string, v: number) => ds.catLabels[f]?.[v] ?? (Number.isInteger(v) ? String(v) : v.toFixed(1));
+const firstNum = (ds: Dataset) => ds.baseFields.find((f) => ds.fields[f]?.kind === 'num') ?? ds.baseFields[0];
 
-const BASE_FIELDS = ['season', 'yr', 'mnth', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'atemp', 'hum', 'windspeed', 'casual', 'registered', 'cnt'] as const;
-function baseRow(d: BikeDay): Row {
-  const r: Row = { dteday: Date.parse(d.dteday) };
-  for (const f of BASE_FIELDS) r[f] = (d as unknown as Record<string, number>)[f];
-  return r;
-}
 function aggOf(vals: number[], agg: Agg): number {
   if (!vals.length) return 0;
   if (agg === 'count') return vals.length;
@@ -41,18 +30,17 @@ function aggOf(vals: number[], agg: Agg): number {
 }
 
 interface VData { rows: Row[]; idxGroups: number[][]; memberY: number[][]; grouped: boolean; byF?: string; }
-/** 派生→筛选→分组→排序。返回渲染行 + 每行的 BIKE 成员下标 + 成员 y 值（供选区再聚合）。 */
-function viewData(spec: ViewSpec): VData {
-  const yf = spec.y ?? 'cnt';
+function viewData(spec: ViewSpec, ds: Dataset): VData {
+  const yf = spec.y ?? firstNum(ds);
   const raw: Row[] = [], rawIdx: number[] = [];
-  for (let i = 0; i < BIKE.length; i++) {
-    const r = baseRow(BIKE[i]);
+  for (let i = 0; i < ds.rows.length; i++) {
+    const r: Row = { ...ds.rows[i] };
     if (spec.derive) for (const d of spec.derive) r[d.name] = evalNum(d.expr, r);
     if (spec.filter && !evalBool(spec.filter, r)) continue;
     raw.push(r); rawIdx.push(i);
   }
 
-  const byF = spec.by ?? (spec.chart === 'bar' ? 'weathersit' : undefined);
+  const byF = spec.by ?? (spec.chart === 'bar' ? ds.baseFields.find((f) => ds.fields[f]?.kind === 'cat') : undefined);
   const aggF: Agg = spec.agg ?? 'mean';
   const grouped = !!(byF && (spec.agg || spec.chart === 'bar'));
 
@@ -90,9 +78,9 @@ const titleCfg = (t?: string) => ({ text: t ?? '', left: 8, top: 4, textStyle: {
 const grid = { left: 48, right: 16, top: 34, bottom: 28 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function buildOption(spec: ViewSpec, vd: VData, sel: Set<number> | null): any {
+function buildOption(spec: ViewSpec, vd: VData, sel: Set<number> | null, ds: Dataset): any {
   const { rows, idxGroups, memberY, grouped, byF } = vd;
-  const xf = spec.x ?? 'temp', yf = spec.y ?? 'cnt';
+  const xf = spec.x ?? firstNum(ds), yf = spec.y ?? firstNum(ds);
   const anySel = (j: number) => !!sel && idxGroups[j].some((i) => sel.has(i));
   const selAgg = (j: number) => aggOf(memberY[j].filter((_, k) => sel!.has(idxGroups[j][k])), spec.agg ?? 'mean');
 
@@ -103,7 +91,7 @@ function buildOption(spec: ViewSpec, vd: VData, sel: Set<number> | null): any {
       if (sel) series.push({ name: '选中', type: 'bar', data: rows.map((_, j) => Math.round(selAgg(j) * 100) / 100), itemStyle: { color: ACCENT } });
       return {
         animation: true, animationDuration: 300, title: titleCfg(spec.title), legend: sel ? { right: 12, top: 6, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 10 } } : undefined,
-        grid, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: rows.map((r) => catLabel(byF!, r[byF!])), ...AXIS }, yAxis: { type: 'value', ...AXIS }, series,
+        grid, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: rows.map((r) => catLabel(ds, byF!, r[byF!])), ...AXIS }, yAxis: { type: 'value', ...AXIS }, series,
       };
     }
     const pts = rows.map((r) => [r[byF!], r[yf] ?? 0]);
@@ -127,7 +115,7 @@ function buildOption(spec: ViewSpec, vd: VData, sel: Set<number> | null): any {
     if (sel) return anySel(j) ? (cf ? base : ACCENT) : DIM;
     return base;
   };
-  const isTime = xf === 'dteday';
+  const isTime = xf === ds.dateField;
   const base: any = {
     animation: true, animationDuration: 300, title: titleCfg(spec.title), grid, tooltip: { trigger: 'item' },
     toolbox: { show: false, feature: { brush: { type: ['rect', 'clear'] } } },
@@ -149,10 +137,11 @@ export function LinkedView({ spec }: { spec: ViewSpec }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
   const idxRef = useRef<number[][]>([]);
+  const dataset = useWorkbenchStore((s) => s.dataset);
   const selection = useWorkbenchStore((s) => s.selection);
   const setSelection = useWorkbenchStore((s) => s.setSelection);
 
-  const vd = useMemo(() => viewData(spec), [spec]);
+  const vd = useMemo(() => viewData(spec, dataset), [spec, dataset]);
   idxRef.current = vd.idxGroups;
 
   useEffect(() => {
@@ -176,12 +165,12 @@ export function LinkedView({ spec }: { spec: ViewSpec }) {
     const chart = chartRef.current;
     if (!chart) return;
     const sel = selection ? new Set(selection) : null;
-    chart.setOption(buildOption(spec, vd, sel), true);
+    chart.setOption(buildOption(spec, vd, sel, dataset), true);
     const brushable = spec.chart === 'scatter' || spec.chart === 'line';
     if (brushable) {
       chart.dispatchAction({ type: 'takeGlobalCursor', key: 'brush', brushOption: { brushType: (spec.chart === 'line' && !vd.grouped) ? 'lineX' : 'rect', brushMode: 'single' } });
     }
-  }, [spec, vd, selection]);
+  }, [spec, vd, selection, dataset]);
 
   return (
     <div ref={boxRef} style={{ position: 'relative', width: '100%', height: '100%', border: '1px solid hsl(var(--border))', borderRadius: 8, overflow: 'hidden', background: 'hsl(var(--background))' }}>
