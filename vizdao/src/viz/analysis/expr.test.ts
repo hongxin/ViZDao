@@ -36,6 +36,20 @@ describe('expr 求值器', () => {
     expect(evalBool({ ...e, b: { k: 'cmp', op: '==', a: { k: 'field', name: 'workingday' }, b: { k: 'num', v: 0 } } }, row)).toBe(false);
   });
 
+  it('分箱 bin：温度落到所在档下沿', () => {
+    expect(evalNum({ k: 'bin', a: { k: 'field', name: 'temp' }, width: 5 }, row)).toBe(30);
+    expect(evalNum({ k: 'bin', a: { k: 'num', v: 23 }, width: 5 }, row)).toBe(20);
+    expect(evalNum({ k: 'bin', a: { k: 'num', v: 7 }, width: 0 }, row)).toBe(7); // width 0 保护
+  });
+
+  it('函数 abs/sqrt/round/log（含非正保护）', () => {
+    expect(evalNum({ k: 'func', fn: 'abs', a: { k: 'num', v: -4 } }, row)).toBe(4);
+    expect(evalNum({ k: 'func', fn: 'sqrt', a: { k: 'num', v: 9 } }, row)).toBe(3);
+    expect(evalNum({ k: 'func', fn: 'round', a: { k: 'num', v: 2.6 } }, row)).toBe(3);
+    expect(evalNum({ k: 'func', fn: 'log', a: { k: 'num', v: 0 } }, row)).toBe(0);
+    expect(evalNum({ k: 'func', fn: 'sqrt', a: { k: 'num', v: -1 } }, row)).toBe(0);
+  });
+
   it('无表达式：filter 全通过', () => {
     expect(evalBool(undefined, row)).toBe(true);
   });

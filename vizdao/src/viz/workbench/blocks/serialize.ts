@@ -14,6 +14,8 @@ export function exprToBlock(e: Expr): any {
     case 'arith': return { type: 'expr_arith', fields: { op: e.op }, inputs: { A: { block: exprToBlock(e.a) }, B: { block: exprToBlock(e.b) } } };
     case 'cmp': return { type: 'expr_cmp', fields: { op: e.op }, inputs: { A: { block: exprToBlock(e.a) }, B: { block: exprToBlock(e.b) } } };
     case 'logic': return { type: 'expr_logic', fields: { op: e.op }, inputs: { A: { block: exprToBlock(e.a) }, B: { block: exprToBlock(e.b) } } };
+    case 'func': return { type: 'expr_func', fields: { fn: e.fn }, inputs: { A: { block: exprToBlock(e.a) } } };
+    case 'bin': return { type: 'expr_bin', fields: { width: e.width }, inputs: { A: { block: exprToBlock(e.a) } } };
   }
 }
 export function blockToExpr(b: any): Expr | undefined {
@@ -27,6 +29,8 @@ export function blockToExpr(b: any): Expr | undefined {
     case 'expr_arith': return { k: 'arith', op: f.op, a: A(), b: B() };
     case 'expr_cmp': return { k: 'cmp', op: f.op, a: A(), b: B() };
     case 'expr_logic': return { k: 'logic', op: f.op, a: A(), b: B() };
+    case 'expr_func': return { k: 'func', fn: f.fn, a: A() };
+    case 'expr_bin': return { k: 'bin', a: A(), width: Number(f.width) || 0 };
   }
   return undefined;
 }

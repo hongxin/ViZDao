@@ -36,6 +36,17 @@ describe('积木 ↔ ViewSpec 序列化往返', () => {
     expect(back[0].derive).toHaveLength(2);
   });
 
+  it('分箱 + 函数 表达式往返', () => {
+    const views: ViewSpec[] = [{
+      id: 'v7', chart: 'bar', by: '温度档', y: 'cnt', agg: 'mean',
+      derive: [{ name: '温度档', expr: { k: 'bin', a: { k: 'field', name: 'temp' }, width: 5 } }],
+      filter: { k: 'func', fn: 'abs', a: { k: 'field', name: 'windspeed' } },
+    }];
+    const back = stateToSpecs(specsToState(views));
+    expect(canon(back)).toBe(canon(views));
+    expect(back[0].derive?.[0].expr).toEqual({ k: 'bin', a: { k: 'field', name: 'temp' }, width: 5 });
+  });
+
   it('保留视图 id（data）', () => {
     const views: ViewSpec[] = [{ id: 'keepme', chart: 'line', x: 'dteday', y: 'cnt' }];
     expect(stateToSpecs(specsToState(views))[0].id).toBe('keepme');

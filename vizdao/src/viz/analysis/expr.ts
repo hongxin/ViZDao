@@ -6,7 +6,9 @@ export type Expr =
   | { k: 'num'; v: number }
   | { k: 'arith'; op: '+' | '-' | '*' | '/'; a: Expr; b: Expr }
   | { k: 'cmp'; op: '>' | '<' | '>=' | '<=' | '==' | '!='; a: Expr; b: Expr }
-  | { k: 'logic'; op: 'and' | 'or'; a: Expr; b: Expr };
+  | { k: 'logic'; op: 'and' | 'or'; a: Expr; b: Expr }
+  | { k: 'func'; fn: 'abs' | 'log' | 'sqrt' | 'round'; a: Expr }
+  | { k: 'bin'; a: Expr; width: number };
 
 export type Row = Record<string, number>;
 
@@ -39,6 +41,17 @@ export function evalNum(e: Expr | undefined, row: Row): number {
       const a = evalBool(e.a, row), b = evalBool(e.b, row);
       return (e.op === 'and' ? a && b : a || b) ? 1 : 0;
     }
+    case 'func': {
+      const v = evalNum(e.a, row);
+      if (e.fn === 'abs') return Math.abs(v);
+      if (e.fn === 'sqrt') return v >= 0 ? Math.sqrt(v) : 0;
+      if (e.fn === 'round') return Math.round(v);
+      return v > 0 ? Math.log(v) : 0; // log：非正数保护
+    }
+    case 'bin': {
+      const v = evalNum(e.a, row);
+      return e.width > 0 ? Math.floor(v / e.width) * e.width : v; // 分箱：落到所在档下沿
+    }
   }
 }
 
@@ -50,8 +63,12 @@ export function evalBool(e: Expr | undefined, row: Row): boolean {
 /** 表达式里引用到的字段名（用于校验/提示）。 */
 export function exprFields(e: Expr | undefined, out: Set<string> = new Set()): Set<string> {
   if (!e) return out;
-  if (e.k === 'field') out.add(e.name);
-  else if (e.k !== 'num') { exprFields(e.a, out); exprFields(e.b, out); }
+  switch (e.k) {
+    case 'field': out.add(e.name); break;
+    case 'num': break;
+    case 'func': case 'bin': exprFields(e.a, out); break;
+    default: exprFields(e.a, out); exprFields(e.b, out); break; // arith / cmp / logic
+  }
   return out;
 }
 
@@ -64,5 +81,7 @@ export function exprToText(e: Expr | undefined, labelOf: (f: string) => string =
     case 'arith': return `${exprToText(e.a, labelOf)} ${e.op} ${exprToText(e.b, labelOf)}`;
     case 'cmp': return `${exprToText(e.a, labelOf)} ${e.op} ${exprToText(e.b, labelOf)}`;
     case 'logic': return `${exprToText(e.a, labelOf)} ${e.op === 'and' ? '且' : '或'} ${exprToText(e.b, labelOf)}`;
+    case 'func': return `${e.fn}(${exprToText(e.a, labelOf)})`;
+    case 'bin': return `分箱(${exprToText(e.a, labelOf)}, ${e.width})`;
   }
 }

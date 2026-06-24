@@ -12,6 +12,8 @@ const ADDERS: { type: string; label: string; color: string }[] = [
   { type: 'expr_field', label: '字段', color: '#2e7ebb' },
   { type: 'expr_num', label: '数值', color: '#2e7ebb' },
   { type: 'expr_arith', label: '算术', color: '#2e7ebb' },
+  { type: 'expr_bin', label: '分箱', color: '#2e7ebb' },
+  { type: 'expr_func', label: '函数', color: '#2e7ebb' },
   { type: 'expr_cmp', label: '比较', color: '#3b9c5a' },
   { type: 'expr_logic', label: '逻辑', color: '#3b9c5a' },
 ];

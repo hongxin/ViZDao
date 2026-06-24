@@ -56,6 +56,16 @@ export function defineViewBlock(): void {
     this.appendValueInput('B').setCheck('Boolean');
     this.setInputsInline(true); this.setOutput(true, 'Boolean'); this.setColour('#3b9c5a');
   } };
+  D['expr_func'] = { init(this: any) {
+    this.appendDummyInput().appendField(new Blockly.FieldDropdown([['绝对值', 'abs'], ['对数', 'log'], ['平方根', 'sqrt'], ['四舍五入', 'round']]), 'fn');
+    this.appendValueInput('A').setCheck('Number');
+    this.setInputsInline(true); this.setOutput(true, 'Number'); this.setColour('#2e7ebb'); this.setTooltip('一元函数');
+  } };
+  D['expr_bin'] = { init(this: any) {
+    this.appendValueInput('A').setCheck('Number').appendField('分箱');
+    this.appendDummyInput().appendField('宽').appendField(new Blockly.FieldNumber(5, 0.0001), 'width');
+    this.setInputsInline(true); this.setOutput(true, 'Number'); this.setColour('#2e7ebb'); this.setTooltip('把连续量切成等宽档（如气温每 5°C 一档）');
+  } };
   D['vz_derive'] = { init(this: any) {
     this.appendValueInput('EXPR').setCheck('Number').appendField('新列').appendField(new Blockly.FieldTextInput('占比'), 'name').appendField('=');
     this.setPreviousStatement(true, 'derive'); this.setNextStatement(true, 'derive'); this.setColour('#a855f7'); this.setTooltip('派生一个新列：name = 表达式');
