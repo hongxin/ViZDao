@@ -27,6 +27,9 @@ export const VALUES: number[] = (() => {
 })();
 const N = VALUES.length;
 const VMIN = Math.min(...VALUES), VMAX = Math.max(...VALUES);
+// 干净的轴边界（避免 -2.4615… 这种长小数标签）。
+const XMIN = Math.floor((VMIN - 0.4) * 2) / 2, XMAX = Math.ceil((VMAX + 0.4) * 2) / 2;
+const niceMax = (m: number) => Math.ceil(m * 1.18 * 10) / 10;
 
 const AXIS = {
   axisLabel: { show: true, fontSize: 10, color: 'hsl(0 0% 58%)', margin: 6 },
@@ -49,13 +52,16 @@ function peaksOf(ys: number[]): number {
   return p;
 }
 
-function baseAxes() {
+// 把 y 轴顶住实际密度范围（自定义系列会误用 bin 边界值定 y 轴域，导致密度条被压扁到底部）；
+// 底部留足空间，让 x 轴/rug/条形基座避开底部叙述文字。
+function baseAxes(yMax?: number) {
   return {
-    grid: [{ left: '7%', right: '5%', top: '6%', bottom: '11%' }],
-    xAxis: [{ type: 'value' as const, min: VMIN - 0.6, max: VMAX + 0.6, name: 'y 值', nameLocation: 'end' as const, nameGap: 6, nameTextStyle: { color: 'hsl(0 0% 55%)', fontSize: 10 }, ...AXIS }],
-    yAxis: [{ type: 'value' as const, min: 0, name: '密度', nameTextStyle: { color: 'hsl(0 0% 55%)', fontSize: 10 }, ...AXIS }],
+    grid: [{ left: '7%', right: '5%', top: '8%', bottom: '30%' }],
+    xAxis: [{ type: 'value' as const, min: XMIN, max: XMAX, name: 'y 值', nameLocation: 'end' as const, nameGap: 6, nameTextStyle: { color: 'hsl(0 0% 55%)', fontSize: 10 }, ...AXIS }],
+    yAxis: [{ type: 'value' as const, min: 0, max: yMax, name: '密度', nameTextStyle: { color: 'hsl(0 0% 55%)', fontSize: 10 }, ...AXIS }],
   };
 }
+const densMax = (rows: number[][]) => Math.max(0.001, ...rows.map((d) => d[2]));
 
 const RUG_SERIES = { type: 'scatter' as const, symbol: 'rect', symbolSize: [1.5, 14], data: VALUES.map((v) => [v, 0]), itemStyle: { color: RUG, opacity: 0.5 }, z: 5 };
 
@@ -63,7 +69,7 @@ const RUG_SERIES = { type: 'scatter' as const, symbol: 'rect', symbolSize: [1.5,
 function histOption(bins: number, withRug: boolean) {
   const data = histDensity(bins);
   const series: any[] = [{
-    type: 'custom', z: 2,
+    type: 'custom', z: 2, encode: { x: [0, 1], y: 2 },
     renderItem: (_p: any, api: any) => {
       const x0 = api.value(0), x1 = api.value(1), h = api.value(2);
       const p0 = api.coord([x0, 0]); const p1 = api.coord([x1, h]);
@@ -72,15 +78,17 @@ function histOption(bins: number, withRug: boolean) {
     data,
   }];
   if (withRug) series.push(RUG_SERIES);
-  return { animation: true, animationDuration: 300, ...baseAxes(), series };
+  return { animation: true, animationDuration: 300, ...baseAxes(niceMax(densMax(data))), series };
 }
 
 function kdeOption(bw: number) {
   const pts = gaussianKDE(VALUES, bw, 160);
+  const hd = histDensity(24);
+  const yMax = niceMax(Math.max(densMax(hd), Math.max(...pts.map((p) => p.density))));
   return {
-    animation: true, animationDuration: 300, ...baseAxes(),
+    animation: true, animationDuration: 300, ...baseAxes(yMax),
     series: [
-      { type: 'custom', z: 1, renderItem: (_p: any, api: any) => { const x0 = api.value(0), x1 = api.value(1), h = api.value(2); const p0 = api.coord([x0, 0]); const p1 = api.coord([x1, h]); return { type: 'rect', shape: { x: p0[0] + 0.5, y: p1[1], width: Math.max(p1[0] - p0[0] - 1, 0.5), height: p0[1] - p1[1] }, style: { fill: HIST, opacity: 0.35 } }; }, data: histDensity(24) },
+      { type: 'custom', z: 1, encode: { x: [0, 1], y: 2 }, renderItem: (_p: any, api: any) => { const x0 = api.value(0), x1 = api.value(1), h = api.value(2); const p0 = api.coord([x0, 0]); const p1 = api.coord([x1, h]); return { type: 'rect', shape: { x: p0[0] + 0.5, y: p1[1], width: Math.max(p1[0] - p0[0] - 1, 0.5), height: p0[1] - p1[1] }, style: { fill: HIST, opacity: 0.35 } }; }, data: hd },
       { type: 'line', z: 3, showSymbol: false, lineStyle: { color: ACCENT, width: 2.5 }, data: pts.map((p) => [p.x, p.density]) },
       RUG_SERIES,
     ],
