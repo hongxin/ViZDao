@@ -30,10 +30,16 @@ describe('VizWorkbench 多单元导航', () => {
     expect(screen.getByText(/四组真实数据/)).toBeInTheDocument();
   });
 
-  it('末单元（收束）渲染收束页内容', () => {
-    useNavStore.setState({ index: LESSON_META.length - 1 });
+  it('收束单元渲染收束页内容', () => {
+    useNavStore.setState({ index: LESSON_META.findIndex((m) => m.id === 'closing') });
     render(<VizWorkbench />);
     expect(screen.getByText(/一条暗线/)).toBeInTheDocument();
+  });
+
+  it('末单元（未来·自由创作）渲染创作工作室', () => {
+    useNavStore.setState({ index: LESSON_META.length - 1 });
+    render(<VizWorkbench />);
+    expect(screen.getByText(/你创作的可视化会出现在这里/)).toBeInTheDocument();
   });
 
   it('点"过拟合"tab → 渲染过拟合单元内容', () => {

@@ -16,7 +16,7 @@ function notify() {
 }
 
 export function addPreview(p: Preview) {
-  _previews = [..._previews, p];
+  _previews = [..._previews.filter(x => x.id !== p.id), p]; // 按 id 去重，避免重复 key
   notify();
 }
 

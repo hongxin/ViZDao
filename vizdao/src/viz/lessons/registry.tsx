@@ -8,6 +8,7 @@ import { HighdimUnit } from '../units/highdim/highdim.unit'; // 高维困境（�
 import { ClusteringUnit } from '../units/clustering/clustering.unit'; // 聚类（体验引擎·新范式）
 import { DimReductionUnit } from '../units/dimreduction/dimreduction.unit'; // 降维（体验引擎·新范式）
 import { ClosingUnit } from '../units/closing/closing.unit'; // 收束（体验引擎·新范式）
+import { FutureUnit } from '../units/future/future.unit'; // 未来 · 自由创作（JetBot 全自由度 + 即时预览）
 
 export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   anscombe: AnscombeUnit,
@@ -17,4 +18,5 @@ export const LESSON_COMPONENTS: Record<string, ComponentType> = {
   clustering: ClusteringUnit,
   dimreduction: DimReductionUnit,
   closing: ClosingUnit,
+  future: FutureUnit,
 };

@@ -4,7 +4,7 @@
 export interface LessonMeta {
   id: string;
   title: string;
-  act: 0 | 1 | 2 | 3;
+  act: 0 | 1 | 2 | 3 | 4;
 }
 
 export const LESSON_META: LessonMeta[] = [
@@ -15,6 +15,7 @@ export const LESSON_META: LessonMeta[] = [
   { id: 'clustering', title: '聚类 · K-Means', act: 2 },
   { id: 'dimreduction', title: '降维 · PCA/t-SNE', act: 2 },
   { id: 'closing', title: '收束 · 可视化×AI', act: 3 },
+  { id: 'future', title: '未来 · 自由创作', act: 4 },
 ];
 
 export const ACT_LABEL: Record<number, string> = {
@@ -22,4 +23,5 @@ export const ACT_LABEL: Record<number, string> = {
   1: '一维',
   2: '多维',
   3: '收束',
+  4: '未来',
 };
