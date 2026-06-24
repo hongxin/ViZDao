@@ -28,6 +28,9 @@ export function BlocklyPanel() {
     lastSynced.current = canon(useWorkbenchStore.getState().views);
     applying.current = false;
 
+    // 注入时左面板宽度可能尚未稳定（刚 320→440）；下一帧按真实尺寸重算，修滚动条/度量错位。
+    requestAnimationFrame(() => { Blockly.svgResize(ws); requestAnimationFrame(() => Blockly.svgResize(ws)); });
+
     const onChange = (e: Blockly.Events.Abstract) => {
       if (applying.current || e.isUiEvent) return;
       // 给新拖入/缺 id 的视图块补稳定 id（避免每次编辑重生 id 致视图重建）
