@@ -1,9 +1,9 @@
 // src/viz/workbench/WorkbenchTheory.tsx — 工作台的理论深探：刷选-联动 + 聚合悖论 + 多视图之必要。
 import { Tex, Section, NOTE, TheoryDrawer } from '../engine/theory';
 
-export function WorkbenchTheory({ onClose }: { onClose: () => void }) {
+export function WorkbenchTheory({ onClose, title }: { onClose: () => void; title?: string }) {
   return (
-    <TheoryDrawer onClose={onClose}>
+    <TheoryDrawer onClose={onClose} title={title}>
       <Section label="刷选-联动（brushing & linking）">
         <p style={{ ...NOTE, marginTop: 0 }}>在一个视图里框选一组记录，<b>同一组记录</b>在所有视图里同时高亮。这是视觉分析最核心的动作——让你从多个切面同时审视同一群数据，比任何单图都更逼近真相。（Becker &amp; Cleveland, 1987）</p>
       </Section>

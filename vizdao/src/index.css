@@ -25,7 +25,7 @@
   --vz-text-sm: 0.875rem;  --vz-text-base: 1rem;     --vz-text-lg: 1.25rem;
   --vz-text-xl: 1.5rem;    --vz-text-2xl: 1.953rem;  --vz-text-3xl: 2.441rem;
   /* 间距（8px 基线） */
-  --vz-s1: 0.5rem; --vz-s2: 1rem; --vz-s3: 1.5rem; --vz-s4: 2rem; --vz-s6: 3rem;
+  --vz-s1: 0.5rem; --vz-s2: 1rem; --vz-s3: 1.5rem; --vz-s4: 2rem; --vz-s5: 2.5rem; --vz-s6: 3rem;
 }
 
 /* 一拍进入：克制的淡入上移（动效只为揭示与转场）。 */

@@ -10,11 +10,11 @@ const KNOBS: [string, string, string, string][] = [
   ['降维 t-SNE', 'perplexity', '重局部', '重全局'],
 ];
 
-export function ClosingTheory({ onClose }: { onClose: () => void }) {
+export function ClosingTheory({ onClose, title }: { onClose: () => void; title?: string }) {
   const cell: CSSProperties = { fontSize: 'var(--vz-text-sm)', padding: '0.3rem 0.5rem', color: 'hsl(var(--foreground))' };
   const head: CSSProperties = { ...cell, color: 'hsl(var(--vz-ink-soft))', fontWeight: 400 };
   return (
-    <TheoryDrawer onClose={onClose}>
+    <TheoryDrawer onClose={onClose} title={title}>
       <Section label="一条数学暗线：偏差-方差权衡">
         <Tex block tex={'\\mathbb{E}\\bigl[(\\hat{y}-y)^2\\bigr]=\\underbrace{\\mathrm{Bias}^2}_{\\text{太简单}}+\\underbrace{\\mathrm{Var}}_{\\text{太复杂}}+\\underbrace{\\sigma^2}_{\\text{噪声}}'} />
         <p style={{ ...NOTE, marginTop: 0 }}>几乎每一课，都有一个你必须亲手选的「旋钮」（超参数）。它都在<b>偏差 ↔ 方差</b>之间权衡——拧太小、太大都不对：</p>

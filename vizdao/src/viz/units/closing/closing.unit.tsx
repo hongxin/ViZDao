@@ -26,16 +26,18 @@ export function ClosingUnit() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-      <ClosingStage key={`stage-${runKey}`} ref={stageRef} />
       {!done ? (
-        <Player
-          key={`player-${runKey}`}
-          script={CLOSING_CONCEPT}
-          onBeatEnter={(d) => stageRef.current?.apply(d)}
-          onComplete={() => setDone(true)}
-        />
+        <>
+          <ClosingStage key={`stage-${runKey}`} ref={stageRef} />
+          <Player
+            key={`player-${runKey}`}
+            script={CLOSING_CONCEPT}
+            onBeatEnter={(d) => stageRef.current?.apply(d)}
+            onComplete={() => setDone(true)}
+          />
+        </>
       ) : (
-        // 暗线收口 → 交棒 → 「训·知道」工作台：轮到学员对真数据出手。
+        // 暗线收口 → 交棒 → 「训·知道」工作台：轮到学员对真数据出手。（此时收束 Stage 卸载，避免理论开关重叠）
         <Workbench key={`wb-${runKey}`} />
       )}
     </div>

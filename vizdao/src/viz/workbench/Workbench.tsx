@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { LinkedView } from './LinkedView';
 import { WorkbenchTheory } from './WorkbenchTheory';
+import { ClosingTheory } from '../units/closing/ClosingTheory';
 import { useWorkbenchStore, nextViewId, type ViewSpec, type ChartKind } from '../../store/workbenchStore';
 import { BIKE_FIELDS } from '../datasets/bikeSharing';
 
@@ -49,7 +50,7 @@ export function Workbench() {
   const setSelection = useWorkbenchStore((s) => s.setSelection);
   const addView = useWorkbenchStore((s) => s.addView);
   const mission = useWorkbenchStore((s) => s.mission);
-  const [theoryOpen, setTheoryOpen] = useState(false);
+  const [theory, setTheory] = useState<null | 'analysis' | 'method'>(null);
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'hsl(var(--background))' }}>
@@ -60,7 +61,9 @@ export function Workbench() {
         </span>
         <span style={{ display: 'inline-flex', gap: 'var(--vz-s3)', alignItems: 'center' }}>
           {selection && <button onClick={() => setSelection(null)} style={{ border: 'none', background: 'transparent', color: 'hsl(var(--vz-ink-soft))', cursor: 'pointer', fontSize: 'var(--vz-text-sm)' }}>清除选区</button>}
-          <button onClick={() => setTheoryOpen(true)} style={{ border: 'none', background: 'transparent', color: ACCENT, cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: 500 }}>∂ 理论深探</button>
+          <span style={{ fontSize: 'var(--vz-text-sm)', color: 'hsl(var(--vz-ink-soft))' }}>理论深探</span>
+          <button onClick={() => setTheory('analysis')} style={{ border: 'none', background: 'transparent', color: ACCENT, cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: 500 }}>① 视觉分析</button>
+          <button onClick={() => setTheory('method')} style={{ border: 'none', background: 'transparent', color: ACCENT, cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: 500 }}>② 本课方法论</button>
         </span>
       </div>
 
@@ -79,7 +82,8 @@ export function Workbench() {
         </div>
       </div>
 
-      {theoryOpen && <WorkbenchTheory onClose={() => setTheoryOpen(false)} />}
+      {theory === 'analysis' && <WorkbenchTheory title="理论 ① · 视觉分析" onClose={() => setTheory(null)} />}
+      {theory === 'method' && <ClosingTheory title="理论 ② · 本课方法论" onClose={() => setTheory(null)} />}
     </div>
   );
 }

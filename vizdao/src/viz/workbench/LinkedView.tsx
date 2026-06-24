@@ -5,7 +5,7 @@ import * as echarts from 'echarts/core';
 import { ScatterChart, LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, BrushComponent, ToolboxComponent, TitleComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { BIKE, BIKE_FIELDS, type BikeDay } from '../datasets/bikeSharing';
+import { BIKE, type BikeDay } from '../datasets/bikeSharing';
 import { useWorkbenchStore, type ViewSpec } from '../../store/workbenchStore';
 
 echarts.use([ScatterChart, LineChart, BarChart, GridComponent, TooltipComponent, BrushComponent, ToolboxComponent, TitleComponent, LegendComponent, CanvasRenderer]);
@@ -48,7 +48,7 @@ function buildOption(spec: ViewSpec, sel: Set<number> | null): any {
     return {
       animation: true, animationDuration: 300, title: titleCfg(spec.title), legend: sel ? { right: 12, top: 6, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 10 } } : undefined,
       grid, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: cats.map((c) => catLabel(by, c)), ...AXIS },
-      yAxis: { type: 'value', name: `${spec.agg ?? 'mean'}(${BIKE_FIELDS[yf]?.label ?? yf})`, nameTextStyle: { fontSize: 10, color: 'hsl(0 0% 55%)' }, ...AXIS },
+      yAxis: { type: 'value', ...AXIS },
       series,
     };
   }
@@ -66,8 +66,9 @@ function buildOption(spec: ViewSpec, sel: Set<number> | null): any {
     tooltip: { trigger: 'item' },
     toolbox: { show: false, feature: { brush: { type: ['rect', 'clear'] } } },
     brush: { brushType: 'rect', brushMode: 'single', throttleType: 'debounce', throttleDelay: 100, brushStyle: { borderColor: ACCENT, borderWidth: 1, color: 'rgba(239,125,34,0.10)' } },
-    xAxis: { type: isTime ? 'time' : 'value', scale: !isTime, name: BIKE_FIELDS[xf]?.label ?? xf, nameLocation: 'middle', nameGap: 22, nameTextStyle: { fontSize: 10, color: 'hsl(0 0% 55%)' }, ...AXIS },
-    yAxis: { type: 'value', scale: true, name: BIKE_FIELDS[yf]?.label ?? yf, nameTextStyle: { fontSize: 10, color: 'hsl(0 0% 55%)' }, ...AXIS },
+    // 轴名省去（标题已含 x×y 含义），避免与左上标题重叠；保留刻度。
+    xAxis: { type: isTime ? 'time' : 'value', scale: !isTime, ...AXIS },
+    yAxis: { type: 'value', scale: true, ...AXIS },
   };
   if (spec.chart === 'line') {
     base.series = [
