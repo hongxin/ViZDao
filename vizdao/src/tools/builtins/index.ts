@@ -12,6 +12,7 @@ import { createExportFile } from './exportFile';
 import { createGetTime } from './getTime';
 import { createGetSysinfo } from './getSysinfo';
 import { registerVizTools } from '../../viz/tutor/vizTools';
+import { registerAnalysisTools } from '../../viz/analysis/analysisTools';
 
 export function registerBuiltins(registry: ToolRegistry): void {
   const fs = registry.fs;
@@ -38,4 +39,7 @@ export function registerBuiltins(registry: ToolRegistry): void {
 
   // ViZDao tutor tools — read-only experiment state inspection
   registerVizTools(registry);
+
+  // 训·知道工作台 — AI 协同分析者的工具带（搭图/刷选/读数，改 workbenchStore）
+  registerAnalysisTools(registry);
 }
