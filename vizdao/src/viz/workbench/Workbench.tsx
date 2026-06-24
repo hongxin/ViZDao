@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { LinkedView } from './LinkedView';
 import { WorkbenchTheory } from './WorkbenchTheory';
 import { AiPanel } from './AiPanel';
+import { BlocklyPanel } from './BlocklyPanel';
 import { ClosingTheory } from '../units/closing/ClosingTheory';
 import { useWorkbenchStore, nextViewId, type ViewSpec, type ChartKind } from '../../store/workbenchStore';
 import { BIKE_FIELDS } from '../datasets/bikeSharing';
@@ -52,7 +53,7 @@ export function Workbench() {
   const addView = useWorkbenchStore((s) => s.addView);
   const mission = useWorkbenchStore((s) => s.mission);
   const [theory, setTheory] = useState<null | 'analysis' | 'method'>(null);
-  const [leftTab, setLeftTab] = useState<'gui' | 'ai'>('gui');
+  const [leftTab, setLeftTab] = useState<'gui' | 'ai' | 'blocks'>('gui');
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'hsl(var(--background))' }}>
@@ -70,27 +71,27 @@ export function Workbench() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {/* 左·意图：两通道并存——✋ 自己探索(GUI) / 💬 AI 对话(JetBot 引擎) */}
-        <div style={{ width: 320, flexShrink: 0, borderRight: '1px solid hsl(var(--border))', display: 'flex', flexDirection: 'column' }}>
+        {/* 左·意图：三通道并存——✋ 探索(GUI) / 💬 AI / 🧩 积木，共用 ViewSpec IR */}
+        <div style={{ width: leftTab === 'blocks' ? 440 : 320, flexShrink: 0, borderRight: '1px solid hsl(var(--border))', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', borderBottom: '1px solid hsl(var(--border))' }}>
-            {(['gui', 'ai'] as const).map((tab) => (
+            {([['gui', '✋ 探索'], ['ai', '💬 AI'], ['blocks', '🧩 积木']] as const).map(([tab, lbl]) => (
               <button key={tab} onClick={() => setLeftTab(tab)}
-                style={{ flex: 1, padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: leftTab === tab ? 600 : 400, color: leftTab === tab ? ACCENT : 'hsl(var(--vz-ink-soft))', borderBottom: leftTab === tab ? `2px solid ${ACCENT}` : '2px solid transparent' }}>
-                {tab === 'gui' ? '✋ 自己探索' : '💬 AI 对话'}
+                style={{ flex: 1, padding: '0.5rem 0.2rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 'var(--vz-text-sm)', fontWeight: leftTab === tab ? 600 : 400, color: leftTab === tab ? ACCENT : 'hsl(var(--vz-ink-soft))', borderBottom: leftTab === tab ? `2px solid ${ACCENT}` : '2px solid transparent' }}>
+                {lbl}
               </button>
             ))}
           </div>
           <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-            {leftTab === 'gui' ? (
+            {leftTab === 'gui' && (
               <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: 'var(--vz-s3)' }}>
                 <div style={{ fontSize: 'var(--vz-text-sm)', color: 'hsl(var(--vz-ink-soft))', marginBottom: 'var(--vz-s2)' }}>视图（拖框选任一视图即可联动）</div>
                 {views.map((v) => <ViewEditor key={v.id} spec={v} />)}
                 <button onClick={() => addView({ id: nextViewId(), chart: 'scatter', x: 'temp', y: 'cnt', title: '新视图' })}
                   style={{ width: '100%', padding: '0.4rem', borderRadius: 6, border: '1px dashed hsl(var(--border))', background: 'transparent', color: 'hsl(var(--vz-ink-soft))', cursor: 'pointer', fontSize: 'var(--vz-text-sm)' }}>+ 添加视图</button>
               </div>
-            ) : (
-              <AiPanel />
             )}
+            {leftTab === 'ai' && <AiPanel />}
+            {leftTab === 'blocks' && <BlocklyPanel />}
           </div>
         </div>
 
