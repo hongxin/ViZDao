@@ -54,8 +54,11 @@ export function specsToState(views: ViewSpec[]): any {
         if (v.filter) inputs.FILTER = { block: exprToBlock(v.filter) };
         if (v.derive?.length) inputs.DERIVE = { block: deriveChain(v.derive) };
         return {
-          type: 'vz_view', x: 16, y: 16 + i * 200, data: v.id,
-          fields: { chart: v.chart, x: v.x ?? 'temp', y: v.y ?? 'cnt', color: v.color ?? NONE, by: v.by ?? NONE, agg: v.agg ?? 'mean' },
+          type: 'vz_view', x: 16, y: 16 + i * 220, data: v.id,
+          fields: {
+            chart: v.chart, x: v.x ?? 'temp', y: v.y ?? 'cnt', color: v.color ?? NONE, by: v.by ?? NONE, agg: v.agg ?? 'mean',
+            sortBy: v.sort?.by ?? NONE, sortDir: v.sort?.dir ?? 'asc', topN: v.sort?.topN ?? 0,
+          },
           ...(Object.keys(inputs).length ? { inputs } : {}),
         };
       }),
@@ -80,23 +83,28 @@ export function stateToSpecs(saved: any): ViewSpec[] {
       d = d.next?.block;
     }
     const filter = blockToExpr(inp.FILTER?.block);
+    const sortByF = opt(f.sortBy);
+    const sort = sortByF ? { by: sortByF, dir: (f.sortDir === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc', topN: Number(f.topN) > 0 ? Number(f.topN) : undefined } : undefined;
     const x = opt(f.x), y = opt(f.y), color = opt(f.color), by = opt(f.by);
     const dsuffix = derive.length ? ` ·新列${derive.length}` : '';
     const fsuffix = filter ? ' ·已筛选' : '';
+    const ssuffix = sort ? `${sort.topN ? ` ·前${sort.topN}` : ' ·已排序'}` : '';
     const title = (chart === 'bar'
       ? `${f.agg ?? 'mean'}(${label(y)}) · 按${label(by)}`
-      : `${label(x)} × ${label(y)}${color ? `（按${label(color)}）` : ''}`) + dsuffix + fsuffix;
+      : `${label(x)} × ${label(y)}${color ? `（按${label(color)}）` : ''}`) + dsuffix + fsuffix + ssuffix;
     const base: ViewSpec = chart === 'bar'
       ? { id, chart, by, y, agg: (f.agg as Agg) ?? 'mean', title }
       : { id, chart, x, y, color, title };
+    if (chart !== 'bar' && by) { base.by = by; base.agg = (f.agg as Agg) ?? 'mean'; } // 折线/散点也可分组成任意图
     if (derive.length) base.derive = derive;
     if (filter) base.filter = filter;
+    if (sort) base.sort = sort;
     return base;
   });
 }
 
 /** 仅比较编码（忽略标题），用于双向同步去环。 */
 export function canon(views: ViewSpec[]): string {
-  return JSON.stringify(views.map((v) => ({ id: v.id, chart: v.chart, x: v.x, y: v.y, color: v.color, by: v.by, agg: v.agg, derive: v.derive, filter: v.filter })));
+  return JSON.stringify(views.map((v) => ({ id: v.id, chart: v.chart, x: v.x, y: v.y, color: v.color, by: v.by, agg: v.agg, derive: v.derive, filter: v.filter, sort: v.sort })));
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

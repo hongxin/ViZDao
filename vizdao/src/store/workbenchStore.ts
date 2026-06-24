@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import type { Expr } from '../viz/analysis/expr';
 
 export type ChartKind = 'scatter' | 'line' | 'bar' | 'hist';
-export type Agg = 'mean' | 'sum' | 'count';
+export type Agg = 'mean' | 'sum' | 'count' | 'min' | 'max';
 
 /** 分析意图 IR：一个视图的完整描述。三通道共用、store 持有、AI 工具产出、积木映射。
  *  Phase 1 起支持「派生新列」derive 与「表达式筛选」filter——x/y/color/by 可引用派生列名。 */
@@ -19,8 +19,11 @@ export interface ViewSpec {
   by?: string;           // 分组列（bar）
   derive?: { name: string; expr: Expr }[];   // 派生新列：name = 表达式
   filter?: Expr;         // 行筛选条件（布尔表达式）
+  sort?: { by: string; dir: 'asc' | 'desc'; topN?: number };   // 排序 / 取前 N
   title?: string;
 }
+
+/** 执行顺序：筛选 → 派生 → 分组(by+agg) → 排序/取前N → 画。by+agg 对所有图型生效（分组成任意图）。 */
 
 export const MISSION = '找出 Bike-Sharing 里最反直觉的一条规律，用多视图为它辩护。';
 

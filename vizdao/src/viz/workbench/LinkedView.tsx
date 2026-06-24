@@ -1,13 +1,13 @@
 // src/viz/workbench/LinkedView.tsx — 一个刷选-联动视图。
-// 每视图先算"增广行"(基础列+派生列+dteday时间戳)→按 filter 筛选→画；记录到 BIKE 的下标映射供联动。
-// 框选 → workbenchStore.setSelection(BIKE下标)；据全局 selection 把选中 accent、其余淡灰。
+// 执行：基础+派生列 → 筛选 → 分组(by+agg,对所有图型) → 排序/取前N → 画。
+// 每个渲染行记录其 BIKE 成员下标(idxGroups)：分组视图刷选选中整组成员，联动照常。
 import { useEffect, useMemo, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { ScatterChart, LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, BrushComponent, ToolboxComponent, TitleComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { BIKE, type BikeDay } from '../datasets/bikeSharing';
-import { useWorkbenchStore, type ViewSpec } from '../../store/workbenchStore';
+import { useWorkbenchStore, type ViewSpec, type Agg } from '../../store/workbenchStore';
 import { evalNum, evalBool, type Row } from '../analysis/expr';
 
 echarts.use([ScatterChart, LineChart, BarChart, GridComponent, TooltipComponent, BrushComponent, ToolboxComponent, TitleComponent, LegendComponent, CanvasRenderer]);
@@ -23,7 +23,7 @@ const CAT_LABELS: Record<string, Record<number, string>> = {
   season: { 1: '春', 2: '夏', 3: '秋', 4: '冬' }, yr: { 0: '2011', 1: '2012' },
   weekday: { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' },
 };
-const catLabel = (f: string, v: number) => CAT_LABELS[f]?.[v] ?? String(v);
+const catLabel = (f: string, v: number) => CAT_LABELS[f]?.[v] ?? (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
 const BASE_FIELDS = ['season', 'yr', 'mnth', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'atemp', 'hum', 'windspeed', 'casual', 'registered', 'cnt'] as const;
 function baseRow(d: BikeDay): Row {
@@ -31,16 +31,55 @@ function baseRow(d: BikeDay): Row {
   for (const f of BASE_FIELDS) r[f] = (d as unknown as Record<string, number>)[f];
   return r;
 }
-/** 增广(派生列) + 筛选 → 行 + 到 BIKE 的下标映射。 */
-function viewData(spec: ViewSpec): { rows: Row[]; idx: number[] } {
-  const rows: Row[] = [], idx: number[] = [];
+function aggOf(vals: number[], agg: Agg): number {
+  if (!vals.length) return 0;
+  if (agg === 'count') return vals.length;
+  if (agg === 'sum') return vals.reduce((s, v) => s + v, 0);
+  if (agg === 'min') return Math.min(...vals);
+  if (agg === 'max') return Math.max(...vals);
+  return vals.reduce((s, v) => s + v, 0) / vals.length; // mean
+}
+
+interface VData { rows: Row[]; idxGroups: number[][]; memberY: number[][]; grouped: boolean; byF?: string; }
+/** 派生→筛选→分组→排序。返回渲染行 + 每行的 BIKE 成员下标 + 成员 y 值（供选区再聚合）。 */
+function viewData(spec: ViewSpec): VData {
+  const yf = spec.y ?? 'cnt';
+  const raw: Row[] = [], rawIdx: number[] = [];
   for (let i = 0; i < BIKE.length; i++) {
     const r = baseRow(BIKE[i]);
     if (spec.derive) for (const d of spec.derive) r[d.name] = evalNum(d.expr, r);
     if (spec.filter && !evalBool(spec.filter, r)) continue;
-    rows.push(r); idx.push(i);
+    raw.push(r); rawIdx.push(i);
   }
-  return { rows, idx };
+
+  const byF = spec.by ?? (spec.chart === 'bar' ? 'weathersit' : undefined);
+  const aggF: Agg = spec.agg ?? 'mean';
+  const grouped = !!(byF && (spec.agg || spec.chart === 'bar'));
+
+  let rows: Row[], idxGroups: number[][], memberY: number[][];
+  if (grouped && byF) {
+    const groups = new Map<number, number[]>();
+    raw.forEach((r, p) => { const k = r[byF]; const arr = groups.get(k); if (arr) arr.push(p); else groups.set(k, [p]); });
+    const keys = [...groups.keys()].sort((a, b) => a - b);
+    rows = []; idxGroups = []; memberY = [];
+    for (const k of keys) {
+      const ps = groups.get(k)!;
+      const vals = ps.map((p) => raw[p][yf] ?? 0);
+      rows.push({ [byF]: k, [yf]: aggOf(vals, aggF), _n: ps.length });
+      idxGroups.push(ps.map((p) => rawIdx[p]));
+      memberY.push(vals);
+    }
+  } else {
+    rows = raw; idxGroups = rawIdx.map((i) => [i]); memberY = raw.map((r) => [r[yf] ?? 0]);
+  }
+
+  if (spec.sort?.by) {
+    const sb = spec.sort.by, dir = spec.sort.dir === 'desc' ? -1 : 1;
+    let order = rows.map((_, j) => j).sort((a, b) => ((rows[a][sb] ?? 0) - (rows[b][sb] ?? 0)) * dir);
+    if (spec.sort.topN && spec.sort.topN > 0) order = order.slice(0, spec.sort.topN);
+    rows = order.map((j) => rows[j]); idxGroups = order.map((j) => idxGroups[j]); memberY = order.map((j) => memberY[j]);
+  }
+  return { rows, idxGroups, memberY, grouped, byF };
 }
 
 const AXIS = {
@@ -51,32 +90,41 @@ const titleCfg = (t?: string) => ({ text: t ?? '', left: 8, top: 4, textStyle: {
 const grid = { left: 48, right: 16, top: 34, bottom: 28 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function buildOption(spec: ViewSpec, rows: Row[], idx: number[], sel: Set<number> | null): any {
+function buildOption(spec: ViewSpec, vd: VData, sel: Set<number> | null): any {
+  const { rows, idxGroups, memberY, grouped, byF } = vd;
   const xf = spec.x ?? 'temp', yf = spec.y ?? 'cnt';
-  const inSel = (j: number) => (sel ? sel.has(idx[j]) : false);
+  const anySel = (j: number) => !!sel && idxGroups[j].some((i) => sel.has(i));
+  const selAgg = (j: number) => aggOf(memberY[j].filter((_, k) => sel!.has(idxGroups[j][k])), spec.agg ?? 'mean');
 
-  if (spec.chart === 'bar') {
-    const by = spec.by ?? 'weathersit';
-    const cats = [...new Set(rows.map((r) => r[by]))].sort((a, b) => a - b);
-    const agg = (rs: Row[]) => (rs.length ? rs.reduce((s, r) => s + (r[yf] ?? 0), 0) / rs.length : 0);
-    const allBy = cats.map((c) => agg(rows.filter((r) => r[by] === c)));
-    const series: any[] = [{ name: '全体', type: 'bar', data: allBy.map((v) => Math.round(v)), itemStyle: { color: sel ? DIM : '#93c5fd' } }];
-    if (sel) {
-      const selRows = rows.filter((_, j) => inSel(j));
-      const selBy = cats.map((c) => agg(selRows.filter((r) => r[by] === c)));
-      series.push({ name: '选中', type: 'bar', data: selBy.map((v) => Math.round(v)), itemStyle: { color: ACCENT } });
+  if (grouped) {
+    const main = rows.map((r) => Math.round((r[yf] ?? 0) * 100) / 100);
+    if (spec.chart === 'bar') {
+      const series: any[] = [{ name: '全体', type: 'bar', data: main, itemStyle: { color: sel ? DIM : '#93c5fd' } }];
+      if (sel) series.push({ name: '选中', type: 'bar', data: rows.map((_, j) => Math.round(selAgg(j) * 100) / 100), itemStyle: { color: ACCENT } });
+      return {
+        animation: true, animationDuration: 300, title: titleCfg(spec.title), legend: sel ? { right: 12, top: 6, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 10 } } : undefined,
+        grid, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: rows.map((r) => catLabel(byF!, r[byF!])), ...AXIS }, yAxis: { type: 'value', ...AXIS }, series,
+      };
     }
+    const pts = rows.map((r) => [r[byF!], r[yf] ?? 0]);
+    const series: any[] = spec.chart === 'line'
+      ? [{ type: 'line', symbol: 'circle', symbolSize: 5, lineStyle: { color: sel ? DIM : NEUTRAL, width: 1.6 }, itemStyle: { color: sel ? DIM : NEUTRAL }, data: pts, z: 1 }]
+      : [{ type: 'scatter', symbolSize: 9, itemStyle: { color: sel ? DIM : NEUTRAL }, data: pts, z: 1 }];
+    if (sel) series.push({ type: spec.chart === 'line' ? 'line' : 'scatter', symbol: 'circle', symbolSize: 7, lineStyle: { color: ACCENT, width: 1.8 }, itemStyle: { color: ACCENT }, data: rows.map((r, j) => [r[byF!], selAgg(j)]), z: 3 });
     return {
-      animation: true, animationDuration: 300, title: titleCfg(spec.title), legend: sel ? { right: 12, top: 6, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 10 } } : undefined,
-      grid, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: cats.map((c) => catLabel(by, c)), ...AXIS }, yAxis: { type: 'value', ...AXIS }, series,
+      animation: true, animationDuration: 300, title: titleCfg(spec.title), grid, tooltip: { trigger: 'item' },
+      toolbox: { show: false, feature: { brush: { type: ['rect', 'clear'] } } },
+      brush: { brushType: 'rect', brushMode: 'single', throttleType: 'debounce', throttleDelay: 100, brushStyle: { borderColor: ACCENT, borderWidth: 1, color: 'rgba(239,125,34,0.10)' } },
+      xAxis: { type: 'value', scale: true, ...AXIS }, yAxis: { type: 'value', scale: true, ...AXIS }, series,
     };
   }
 
+  // 未分组：逐点散点/折线
   const cf = spec.color;
   const colorCats = cf ? [...new Set(rows.map((r) => r[cf]))].sort((a, b) => a - b) : [];
   const pColor = (j: number) => {
     const base = cf ? CAT_PALETTE[colorCats.indexOf(rows[j][cf]) % CAT_PALETTE.length] : NEUTRAL;
-    if (sel) return inSel(j) ? (cf ? base : ACCENT) : DIM;
+    if (sel) return anySel(j) ? (cf ? base : ACCENT) : DIM;
     return base;
   };
   const isTime = xf === 'dteday';
@@ -88,9 +136,9 @@ function buildOption(spec: ViewSpec, rows: Row[], idx: number[], sel: Set<number
   };
   if (spec.chart === 'line') {
     base.series = [{ type: 'line', showSymbol: false, lineStyle: { color: sel ? DIM : NEUTRAL, width: 1.4 }, data: rows.map((r) => [r[xf], r[yf]]), z: 1 }];
-    if (sel) base.series.push({ type: 'scatter', symbolSize: 5, itemStyle: { color: ACCENT }, data: rows.filter((_, j) => inSel(j)).map((r) => [r[xf], r[yf]]), z: 3 });
+    if (sel) base.series.push({ type: 'scatter', symbolSize: 5, itemStyle: { color: ACCENT }, data: rows.filter((_, j) => anySel(j)).map((r) => [r[xf], r[yf]]), z: 3 });
   } else {
-    base.series = [{ type: 'scatter', symbolSize: 7, data: rows.map((r, j) => ({ value: [r[xf], r[yf]], itemStyle: { color: pColor(j), opacity: sel && !inSel(j) ? 0.5 : 0.82 } })) }];
+    base.series = [{ type: 'scatter', symbolSize: 7, data: rows.map((r, j) => ({ value: [r[xf], r[yf]], itemStyle: { color: pColor(j), opacity: sel && !anySel(j) ? 0.5 : 0.82 } })) }];
   }
   return base;
 }
@@ -100,12 +148,12 @@ export function LinkedView({ spec }: { spec: ViewSpec }) {
   const elRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
-  const idxRef = useRef<number[]>([]);
+  const idxRef = useRef<number[][]>([]);
   const selection = useWorkbenchStore((s) => s.selection);
   const setSelection = useWorkbenchStore((s) => s.setSelection);
 
-  const { rows, idx } = useMemo(() => viewData(spec), [spec]);
-  idxRef.current = idx;
+  const vd = useMemo(() => viewData(spec), [spec]);
+  idxRef.current = vd.idxGroups;
 
   useEffect(() => {
     if (!elRef.current || !boxRef.current) return;
@@ -116,8 +164,8 @@ export function LinkedView({ spec }: { spec: ViewSpec }) {
     const onBrush = (params: { batch?: { selected: { seriesIndex: number; dataIndex: number[] }[] }[] }) => {
       const picked = new Set<number>();
       const map = idxRef.current;
-      params.batch?.[0]?.selected?.filter((s) => s.seriesIndex === 0).forEach((s) => s.dataIndex?.forEach((j) => { const bi = map[j]; if (bi !== undefined) picked.add(bi); }));
-      if (picked.size > 0) setSelection([...picked]); // 忽略空事件（重绘清 brush）
+      params.batch?.[0]?.selected?.filter((s) => s.seriesIndex === 0).forEach((s) => s.dataIndex?.forEach((j) => map[j]?.forEach((bi) => picked.add(bi))));
+      if (picked.size > 0) setSelection([...picked]);
     };
     chart.on('brushselected', onBrush as never);
     chart.on('brushSelected', onBrush as never);
@@ -128,11 +176,12 @@ export function LinkedView({ spec }: { spec: ViewSpec }) {
     const chart = chartRef.current;
     if (!chart) return;
     const sel = selection ? new Set(selection) : null;
-    chart.setOption(buildOption(spec, rows, idx, sel), true);
-    if (spec.chart === 'scatter' || spec.chart === 'line') {
-      chart.dispatchAction({ type: 'takeGlobalCursor', key: 'brush', brushOption: { brushType: spec.chart === 'line' ? 'lineX' : 'rect', brushMode: 'single' } });
+    chart.setOption(buildOption(spec, vd, sel), true);
+    const brushable = spec.chart === 'scatter' || spec.chart === 'line';
+    if (brushable) {
+      chart.dispatchAction({ type: 'takeGlobalCursor', key: 'brush', brushOption: { brushType: (spec.chart === 'line' && !vd.grouped) ? 'lineX' : 'rect', brushMode: 'single' } });
     }
-  }, [spec, rows, idx, selection]);
+  }, [spec, vd, selection]);
 
   return (
     <div ref={boxRef} style={{ position: 'relative', width: '100%', height: '100%', border: '1px solid hsl(var(--border))', borderRadius: 8, overflow: 'hidden', background: 'hsl(var(--background))' }}>

@@ -10,7 +10,8 @@ export { specsToState, stateToSpecs, canon } from './serialize';
 
 const FIELD_OPTS: [string, string][] = Object.entries(BIKE_FIELDS).map(([k, f]) => [f.label, k]);
 const CHART_OPTS: [string, string][] = [['散点', 'scatter'], ['折线', 'line'], ['柱状', 'bar']];
-const AGG_OPTS: [string, string][] = [['均值', 'mean'], ['求和', 'sum'], ['计数', 'count']];
+const AGG_OPTS: [string, string][] = [['均值', 'mean'], ['求和', 'sum'], ['计数', 'count'], ['最小', 'min'], ['最大', 'max']];
+const DIR_OPTS: [string, string][] = [['↑升', 'asc'], ['↓降', 'desc']];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function deriveNamesOf(block: any): string[] {
@@ -77,6 +78,9 @@ export function defineViewBlock(): void {
     this.appendDummyInput().appendField('色').appendField(new Blockly.FieldDropdown(fieldOptsGen(true)), 'color')
       .appendField('组').appendField(new Blockly.FieldDropdown(fieldOptsGen(true)), 'by')
       .appendField('聚合').appendField(new Blockly.FieldDropdown(AGG_OPTS), 'agg');
+    this.appendDummyInput().appendField('排序').appendField(new Blockly.FieldDropdown(fieldOptsGen(true)), 'sortBy')
+      .appendField(new Blockly.FieldDropdown(DIR_OPTS), 'sortDir')
+      .appendField('取前').appendField(new Blockly.FieldNumber(0, 0, 9999, 1), 'topN');
     this.appendValueInput('FILTER').setCheck('Boolean').appendField('筛选');
     this.appendStatementInput('DERIVE').setCheck('derive').appendField('新列');
     this.setColour('#ef7d22'); this.setTooltip('一个联动视图（可加筛选与派生列）');

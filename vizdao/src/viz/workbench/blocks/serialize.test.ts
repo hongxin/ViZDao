@@ -47,6 +47,26 @@ describe('积木 ↔ ViewSpec 序列化往返', () => {
     expect(back[0].derive?.[0].expr).toEqual({ k: 'bin', a: { k: 'field', name: 'temp' }, width: 5 });
   });
 
+  it('分组折线 + 排序取前N 往返', () => {
+    const views: ViewSpec[] = [{
+      id: 'v8', chart: 'line', x: '温度档', y: 'cnt', by: '温度档', agg: 'mean',
+      derive: [{ name: '温度档', expr: { k: 'bin', a: { k: 'field', name: 'temp' }, width: 5 } }],
+      sort: { by: '温度档', dir: 'asc', topN: 8 },
+    }];
+    const back = stateToSpecs(specsToState(views));
+    expect(canon(back)).toBe(canon(views));
+    expect(back[0].by).toBe('温度档');
+    expect(back[0].sort).toEqual({ by: '温度档', dir: 'asc', topN: 8 });
+  });
+
+  it('降序取前N（max 聚合）往返', () => {
+    const views: ViewSpec[] = [{ id: 'v9', chart: 'bar', by: 'weekday', y: 'cnt', agg: 'max', sort: { by: 'cnt', dir: 'desc' } }];
+    const back = stateToSpecs(specsToState(views));
+    expect(canon(back)).toBe(canon(views));
+    expect(back[0].agg).toBe('max');
+    expect(back[0].sort?.dir).toBe('desc');
+  });
+
   it('保留视图 id（data）', () => {
     const views: ViewSpec[] = [{ id: 'keepme', chart: 'line', x: 'dteday', y: 'cnt' }];
     expect(stateToSpecs(specsToState(views))[0].id).toBe('keepme');
