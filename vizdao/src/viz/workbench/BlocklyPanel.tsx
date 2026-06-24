@@ -41,10 +41,21 @@ export function BlocklyPanel() {
     };
     ws.addChangeListener(onChange);
 
+    // 按真实宽度重算度量，修竖直滚动条错位到画布中间（flyout 开/关后 Blockly 不自动复位）。
+    let resizePending = false;
+    const scheduleResize = () => {
+      if (resizePending) return;
+      resizePending = true;
+      requestAnimationFrame(() => { resizePending = false; if (wsRef.current) Blockly.svgResize(ws); });
+    };
+    ws.addChangeListener(scheduleResize);                  // 加块/拖拽等事件
+    ref.current.addEventListener('pointerup', scheduleResize); // flyout 点开又点空白关闭（无加块事件）
+    const host = ref.current;
+
     const ro = new ResizeObserver(() => Blockly.svgResize(ws));
     ro.observe(ref.current);
 
-    return () => { ro.disconnect(); ws.dispose(); wsRef.current = null; };
+    return () => { ro.disconnect(); host.removeEventListener('pointerup', scheduleResize); ws.dispose(); wsRef.current = null; };
   }, [setViews]);
 
   // 外部（AI/GUI）改了 views → 回填积木。
