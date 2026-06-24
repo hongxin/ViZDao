@@ -1,9 +1,8 @@
 // src/viz/workbench/BlocklyPanel.tsx — 积木通道：Blockly 工作区 ↔ workbenchStore.views 双向同步。
-// 改一个积木字段 → 右侧视图即变；AI/GUI 改视图 → 积木回填。三通道共用同一 ViewSpec IR。
-// 不用常驻 flyout（窄面板会被它占满），改用「+ 新视图」按钮加块。
+// 改积木字段/搭表达式 → 右侧视图即变；AI/GUI 改视图 → 积木回填。三通道共用同一 ViewSpec IR。
 import { useEffect, useRef } from 'react';
 import * as Blockly from 'blockly';
-import { defineViewBlock, specsToState, workspaceToSpecs, canon } from './blocks/viewBlocks';
+import { defineViewBlock, TOOLBOX, specsToState, workspaceToSpecs, canon } from './blocks/viewBlocks';
 import { useWorkbenchStore, nextViewId } from '../../store/workbenchStore';
 
 export function BlocklyPanel() {
@@ -18,7 +17,7 @@ export function BlocklyPanel() {
     if (!ref.current) return;
     defineViewBlock();
     const ws = Blockly.inject(ref.current, {
-      trashcan: true, scrollbars: true,
+      toolbox: TOOLBOX, trashcan: true, scrollbars: true,
       zoom: { controls: true, wheel: true, startScale: 0.9, minScale: 0.5, maxScale: 1.3 },
       grid: { spacing: 22, length: 2, colour: '#eee', snap: true },
     });
@@ -31,6 +30,8 @@ export function BlocklyPanel() {
 
     const onChange = (e: Blockly.Events.Abstract) => {
       if (applying.current || e.isUiEvent) return;
+      // 给新拖入/缺 id 的视图块补稳定 id（避免每次编辑重生 id 致视图重建）
+      ws.getTopBlocks(false).forEach((b) => { if (b.type === 'vz_view' && !b.data) b.data = nextViewId(); });
       const specs = workspaceToSpecs(ws);
       const c = canon(specs);
       if (c !== lastSynced.current) { lastSynced.current = c; setViews(specs); }
@@ -55,24 +56,10 @@ export function BlocklyPanel() {
     setTimeout(() => { applying.current = false; }, 0);
   }, [views]);
 
-  const addBlock = () => {
-    const ws = wsRef.current;
-    if (!ws) return;
-    const b = ws.newBlock('vz_view') as Blockly.BlockSvg;
-    b.data = nextViewId();
-    b.setFieldValue('scatter', 'chart');
-    b.setFieldValue('temp', 'x');
-    b.setFieldValue('cnt', 'y');
-    b.initSvg();
-    b.render();
-    b.moveBy(16, 16 + ws.getTopBlocks(false).length * 8);
-  };
-
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', padding: '0.35rem var(--vz-s3)', borderBottom: '1px solid hsl(var(--border))' }}>
-        <span style={{ fontSize: 'var(--vz-text-sm)', color: 'hsl(var(--vz-ink-soft))' }}>积木 = 看得见的分析意图：改字段，右图即变</span>
-        <button onClick={addBlock} style={{ fontSize: 'var(--vz-text-sm)', padding: '0.2rem 0.6rem', borderRadius: 6, border: '1px solid hsl(var(--border))', background: 'transparent', color: 'hsl(var(--vz-accent))', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ 新视图</button>
+      <div style={{ padding: '0.35rem var(--vz-s3)', fontSize: 'var(--vz-text-sm)', color: 'hsl(var(--vz-ink-soft))', borderBottom: '1px solid hsl(var(--border))', lineHeight: 1.5 }}>
+        积木 = 可编程的分析：从工具箱拖<b style={{ color: '#a855f7' }}>新列</b>派生指标（临时占比 = casual ÷ cnt）、拖<b style={{ color: '#3b9c5a' }}>表达式</b>写筛选（yr = 1 解混杂）→ 右图即变。
       </div>
       <div ref={ref} style={{ flex: 1, minHeight: 0 }} />
     </div>

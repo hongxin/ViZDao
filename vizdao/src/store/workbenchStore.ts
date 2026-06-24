@@ -2,20 +2,23 @@
 // views 是 ViewSpec[]（题眼 IR）；selection 是刷选记录下标集，驱动所有视图联动高亮。
 // 可在 React 外用 useWorkbenchStore.getState().<action>() 直改（供 AI 分析工具调用）。
 import { create } from 'zustand';
+import type { Expr } from '../viz/analysis/expr';
 
 export type ChartKind = 'scatter' | 'line' | 'bar' | 'hist';
 export type Agg = 'mean' | 'sum' | 'count';
 
-/** 分析意图 IR：一个视图的完整描述。三通道共用、store 持有、AI 工具产出、积木映射。 */
+/** 分析意图 IR：一个视图的完整描述。三通道共用、store 持有、AI 工具产出、积木映射。
+ *  Phase 1 起支持「派生新列」derive 与「表达式筛选」filter——x/y/color/by 可引用派生列名。 */
 export interface ViewSpec {
   id: string;
   chart: ChartKind;
-  x?: string;            // 列名编码
+  x?: string;            // 列名编码（基础列或派生列名）
   y?: string;
   color?: string;        // 分类着色列
   agg?: Agg;             // 聚合（bar）
-  by?: string;           // 分组列（bar / hist 的分箱列）
-  filter?: { field: string; cmp: '>' | '<' | '='; value: number };
+  by?: string;           // 分组列（bar）
+  derive?: { name: string; expr: Expr }[];   // 派生新列：name = 表达式
+  filter?: Expr;         // 行筛选条件（布尔表达式）
   title?: string;
 }
 
